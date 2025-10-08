@@ -6,7 +6,6 @@ runs entirely in the browser – it never signs or submits transactions. When yo
 enter a wallet address the page queries Sui's public JSON-RPC endpoint to list
 all detected coin types with human readable balances and expandable activity
 history for each token, complete with coin artwork when available.
-all detected coin types with human readable balances.
 
 ## Running locally
 
@@ -48,10 +47,6 @@ Netlify, or Cloudflare Pages.
   beneath each token row.
 * Converts the raw integer balances and balance deltas into human-friendly
   amounts using the metadata and displays the results in a responsive table.
-* Queries `suix_getCoinMetadata` for each coin type to resolve symbols and
-  decimals.
-* Converts the raw integer balances into human-friendly amounts using the
-  metadata and displays the results in a responsive table.
 
 ## Notes
 
@@ -62,3 +57,7 @@ Netlify, or Cloudflare Pages.
   proxy under your control.
 * Each token activity panel shows up to the 10 most recent balance changes for
   that coin to keep the UI scannable.
+* Older browsers that lack native `BigInt` support will still load the page,
+  but large integer balances are rounded using regular JavaScript numbers. A
+  current Chromium, Firefox, or Safari release provides the most accurate
+  formatting.
