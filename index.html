@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Sui Wallet Holdings Viewer</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background-color: #0f172a;
+        color: #e2e8f0;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem 1.25rem 3rem;
+        background: radial-gradient(circle at top, #1e293b, #0f172a 55%);
+      }
+
+      .app {
+        width: min(960px, 100%);
+        background: rgba(15, 23, 42, 0.75);
+        backdrop-filter: blur(18px);
+        border-radius: 18px;
+        border: 1px solid rgba(148, 163, 184, 0.25);
+        padding: 2.5rem 2rem 2rem;
+        box-shadow: 0 30px 80px rgba(15, 23, 42, 0.45);
+      }
+
+      h1 {
+        margin: 0 0 1.5rem;
+        font-size: clamp(2rem, 3vw + 1rem, 3.2rem);
+        font-weight: 700;
+        letter-spacing: -0.03em;
+        color: #38bdf8;
+        text-align: center;
+      }
+
+      p.description {
+        margin: 0 auto 1.75rem;
+        max-width: 620px;
+        line-height: 1.6;
+        text-align: center;
+        color: #cbd5f5;
+      }
+
+      form {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        justify-content: center;
+        margin-bottom: 1.75rem;
+      }
+
+      input[type="text"] {
+        flex: 1 1 320px;
+        min-width: 240px;
+        padding: 0.85rem 1.1rem;
+        border-radius: 12px;
+        border: 1px solid rgba(148, 163, 184, 0.35);
+        background: rgba(15, 23, 42, 0.75);
+        color: inherit;
+        font-size: 1rem;
+        transition: border 0.2s ease, box-shadow 0.2s ease;
+      }
+
+      input[type="text"]:focus {
+        outline: none;
+        border-color: #38bdf8;
+        box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.25);
+      }
+
+      button {
+        padding: 0.85rem 1.5rem;
+        border-radius: 12px;
+        border: none;
+        background: linear-gradient(135deg, #22d3ee, #3b82f6);
+        color: #0f172a;
+        font-weight: 600;
+        font-size: 1rem;
+        cursor: pointer;
+        transition: transform 0.15s ease, box-shadow 0.2s ease;
+      }
+
+      button:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 12px 20px rgba(56, 189, 248, 0.25);
+      }
+
+      button:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        box-shadow: none;
+        transform: none;
+      }
+
+      .status {
+        min-height: 1.5rem;
+        text-align: center;
+        font-size: 0.95rem;
+        margin-bottom: 1rem;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        background: rgba(15, 23, 42, 0.6);
+        overflow: hidden;
+        border-radius: 12px;
+      }
+
+      thead {
+        background: rgba(56, 189, 248, 0.15);
+        color: #7dd3fc;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        font-size: 0.75rem;
+      }
+
+      th,
+      td {
+        padding: 0.95rem 1rem;
+        text-align: left;
+      }
+
+      tbody tr:nth-child(even) {
+        background: rgba(15, 23, 42, 0.45);
+      }
+
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.35rem 0.6rem;
+        border-radius: 999px;
+        background: rgba(56, 189, 248, 0.18);
+        color: #e0f2fe;
+        font-size: 0.78rem;
+        letter-spacing: 0.04em;
+      }
+
+      .empty-state {
+        text-align: center;
+        padding: 2.5rem 1rem 1.5rem;
+        color: #94a3b8;
+      }
+
+      @media (max-width: 720px) {
+        th,
+        td {
+          padding: 0.75rem 0.6rem;
+        }
+
+        table {
+          font-size: 0.9rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="app">
+      <h1>Sui Wallet Holdings Viewer</h1>
+      <p class="description">
+        Inspect the fungible token balances of any Sui wallet. Enter an address
+        to fetch all coin types and their human-readable balances from the
+        public Sui RPC endpoint. This tool is fully client-side and read-only.
+      </p>
+      <form id="wallet-form">
+        <input
+          id="wallet-input"
+          type="text"
+          inputmode="latin"
+          autocomplete="off"
+          spellcheck="false"
+          placeholder="0x..."
+          aria-label="Sui wallet address"
+          required
+        />
+        <button type="submit">Load balances</button>
+      </form>
+      <div class="status" id="status"></div>
+      <div id="results"></div>
+    </main>
+    <template id="balances-template">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">Token</th>
+            <th scope="col">Balance</th>
+            <th scope="col">Coin type</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </template>
+    <template id="empty-template">
+      <div class="empty-state">No fungible token balances found for this wallet.</div>
+    </template>
+    <script>
+      const RPC_URL = "https://fullnode.mainnet.sui.io/";
+      const form = document.getElementById("wallet-form");
+      const input = document.getElementById("wallet-input");
+      const status = document.getElementById("status");
+      const results = document.getElementById("results");
+      const balancesTpl = document.getElementById("balances-template");
+      const emptyTpl = document.getElementById("empty-template");
+      const metadataCache = new Map();
+
+      async function fetchRpc(method, params) {
+        const response = await fetch(RPC_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            jsonrpc: "2.0",
+            id: Date.now(),
+            method,
+            params,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`RPC call failed with ${response.status}`);
+        }
+
+        const payload = await response.json();
+        if (payload.error) {
+          throw new Error(payload.error.message || "Unexpected RPC error");
+        }
+
+        return payload.result;
+      }
+
+      async function getBalances(address) {
+        return fetchRpc("suix_getAllBalances", [address]);
+      }
+
+      async function getCoinMetadata(coinType) {
+        if (metadataCache.has(coinType)) {
+          return metadataCache.get(coinType);
+        }
+
+        try {
+          const metadata = await fetchRpc("suix_getCoinMetadata", [coinType]);
+          metadataCache.set(coinType, metadata);
+          return metadata;
+        } catch (error) {
+          console.warn("Failed to load metadata for", coinType, error);
+          metadataCache.set(coinType, null);
+          return null;
+        }
+      }
+
+      function normalizeAddress(raw) {
+        return raw.trim();
+      }
+
+      function formatWithDecimals(balance, decimals) {
+        const units = BigInt(balance);
+        if (!decimals) {
+          return units.toString();
+        }
+
+        const divisor = BigInt(10) ** BigInt(decimals);
+        const integerPart = units / divisor;
+        const fractionalPart = units % divisor;
+        if (fractionalPart === 0n) {
+          return integerPart.toString();
+        }
+
+        const paddedFraction = fractionalPart
+          .toString()
+          .padStart(Number(decimals), "0")
+          .replace(/0+$/, "");
+        return `${integerPart.toString()}.${paddedFraction}`;
+      }
+
+      function renderBalances(rows) {
+        results.innerHTML = "";
+        if (!rows.length) {
+          results.appendChild(emptyTpl.content.cloneNode(true));
+          return;
+        }
+
+        const table = balancesTpl.content.cloneNode(true);
+        const tbody = table.querySelector("tbody");
+        for (const row of rows) {
+          const tr = document.createElement("tr");
+          const tokenCell = document.createElement("td");
+          const balanceCell = document.createElement("td");
+          const typeCell = document.createElement("td");
+
+          tokenCell.innerHTML = `<span class="badge">${row.symbol || "Unknown"}</span>`;
+          balanceCell.textContent = row.displayBalance;
+          typeCell.textContent = row.coinType;
+
+          tr.append(tokenCell, balanceCell, typeCell);
+          tbody.appendChild(tr);
+        }
+
+        results.appendChild(table);
+      }
+
+      async function handleSubmit(event) {
+        event.preventDefault();
+        const address = normalizeAddress(input.value);
+        if (!address) {
+          return;
+        }
+
+        status.textContent = "Fetching balances...";
+        status.style.color = "#38bdf8";
+        results.innerHTML = "";
+        form.querySelector("button").disabled = true;
+
+        try {
+          const balances = await getBalances(address);
+          const rows = [];
+
+          for (const balance of balances || []) {
+            const metadata = await getCoinMetadata(balance.coinType);
+            const decimals = metadata?.decimals ?? 0;
+            const symbol = metadata?.symbol ?? null;
+            const displayBalance = formatWithDecimals(balance.totalBalance, decimals);
+
+            rows.push({
+              coinType: balance.coinType,
+              displayBalance,
+              symbol,
+            });
+          }
+
+          renderBalances(rows);
+          status.textContent = `Loaded ${rows.length} token${rows.length === 1 ? "" : "s"}.`;
+          status.style.color = "#34d399";
+        } catch (error) {
+          console.error(error);
+          status.textContent = error.message || "Something went wrong.";
+          status.style.color = "#f87171";
+        } finally {
+          form.querySelector("button").disabled = false;
+        }
+      }
+
+      form.addEventListener("submit", handleSubmit);
+    </script>
+  </body>
+</html>
