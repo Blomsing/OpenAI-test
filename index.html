@@ -1,0 +1,1514 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Sui Wallet Holdings Viewer</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background-color: #0f172a;
+        color: #e2e8f0;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem 1.25rem 3rem;
+        background: radial-gradient(circle at top, #1e293b, #0f172a 55%);
+      }
+
+      .app {
+        width: min(960px, 100%);
+        background: rgba(15, 23, 42, 0.75);
+        backdrop-filter: blur(18px);
+        border-radius: 18px;
+        border: 1px solid rgba(148, 163, 184, 0.25);
+        padding: 2.5rem 2rem 2rem;
+        box-shadow: 0 30px 80px rgba(15, 23, 42, 0.45);
+      }
+
+      h1 {
+        margin: 0 0 1.5rem;
+        font-size: clamp(2rem, 3vw + 1rem, 3.2rem);
+        font-weight: 700;
+        letter-spacing: -0.03em;
+        color: #38bdf8;
+        text-align: center;
+      }
+
+      p.description {
+        margin: 0 auto 1.75rem;
+        max-width: 620px;
+        line-height: 1.6;
+        text-align: center;
+        color: #cbd5f5;
+      }
+
+      form {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        justify-content: center;
+        margin-bottom: 1.75rem;
+      }
+
+      input[type="text"] {
+        flex: 1 1 320px;
+        min-width: 240px;
+        padding: 0.85rem 1.1rem;
+        border-radius: 12px;
+        border: 1px solid rgba(148, 163, 184, 0.35);
+        background: rgba(15, 23, 42, 0.75);
+        color: inherit;
+        font-size: 1rem;
+        transition: border 0.2s ease, box-shadow 0.2s ease;
+      }
+
+      input[type="text"]:focus {
+        outline: none;
+        border-color: #38bdf8;
+        box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.25);
+      }
+
+      button {
+        padding: 0.85rem 1.5rem;
+        border-radius: 12px;
+        border: none;
+        background: linear-gradient(135deg, #22d3ee, #3b82f6);
+        color: #0f172a;
+        font-weight: 600;
+        font-size: 1rem;
+        cursor: pointer;
+        transition: transform 0.15s ease, box-shadow 0.2s ease;
+      }
+
+      button:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 12px 20px rgba(56, 189, 248, 0.25);
+      }
+
+      button:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        box-shadow: none;
+        transform: none;
+      }
+
+      .status {
+        min-height: 1.5rem;
+        text-align: center;
+        font-size: 0.95rem;
+        margin-bottom: 1rem;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        background: rgba(15, 23, 42, 0.6);
+        overflow: hidden;
+        border-radius: 12px;
+      }
+
+      thead {
+        background: rgba(56, 189, 248, 0.15);
+        color: #7dd3fc;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        font-size: 0.75rem;
+      }
+
+      th,
+      td {
+        padding: 0.95rem 1rem;
+        text-align: left;
+      }
+
+      th.actions,
+      td.actions {
+        text-align: right;
+        width: 120px;
+      }
+
+      tbody tr:nth-child(even) {
+        background: rgba(15, 23, 42, 0.45);
+      }
+
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.35rem 0.6rem;
+        border-radius: 999px;
+        background: rgba(56, 189, 248, 0.18);
+        color: #e0f2fe;
+        font-size: 0.78rem;
+        letter-spacing: 0.04em;
+      }
+
+      .token-info {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+      }
+
+      .token-icon {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        overflow: hidden;
+        background: rgba(148, 163, 184, 0.25);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.85rem;
+        color: #cbd5f5;
+        flex-shrink: 0;
+      }
+
+      .token-icon img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+      }
+
+      .token-symbol {
+        font-weight: 600;
+        font-size: 1rem;
+      }
+
+      .token-name {
+        font-size: 0.78rem;
+        color: #cbd5f5;
+        margin-top: 0.15rem;
+      }
+
+      .token-meta {
+        display: flex;
+        flex-direction: column;
+      }
+
+      .expand-btn {
+        border: 1px solid rgba(148, 163, 184, 0.35);
+        background: transparent;
+        color: inherit;
+        border-radius: 999px;
+        padding: 0.4rem 0.95rem;
+        font-size: 0.85rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+      }
+
+      .expand-btn svg {
+        width: 16px;
+        height: 16px;
+        transition: transform 0.2s ease;
+      }
+
+      tr.expanded .expand-btn svg {
+        transform: rotate(180deg);
+      }
+
+      .transaction-panel {
+        background: rgba(15, 23, 42, 0.75);
+        padding: 1.25rem 1.5rem 1.5rem;
+        border-top: 1px solid rgba(148, 163, 184, 0.15);
+      }
+
+      .transaction-panel h3 {
+        margin: 0 0 0.75rem;
+        font-size: 0.95rem;
+        color: #38bdf8;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+
+      .tx-list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 0.9rem;
+      }
+
+      .tx-item {
+        display: flex;
+        justify-content: space-between;
+        gap: 0.75rem;
+        border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+        padding-bottom: 0.75rem;
+      }
+
+      .tx-item:last-child {
+        border-bottom: none;
+        padding-bottom: 0;
+      }
+
+      .tx-amount {
+        font-weight: 600;
+        font-size: 0.95rem;
+      }
+
+      .tx-amount.positive {
+        color: #34d399;
+      }
+
+      .tx-amount.negative {
+        color: #f87171;
+      }
+
+      .tx-meta {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+        font-size: 0.8rem;
+        color: #cbd5f5;
+      }
+
+      .tx-meta a {
+        color: #38bdf8;
+        text-decoration: none;
+        font-weight: 600;
+      }
+
+      .tx-empty {
+        color: #94a3b8;
+        font-size: 0.9rem;
+        padding: 1rem 0 0.25rem;
+      }
+
+      .empty-state {
+        text-align: center;
+        padding: 2.5rem 1rem 1.5rem;
+        color: #94a3b8;
+      }
+
+      .wallet-section {
+        margin-top: 2.5rem;
+      }
+
+      .wallet-section:first-of-type {
+        margin-top: 0;
+      }
+
+      .section-heading {
+        margin: 0;
+        font-size: 1.15rem;
+        letter-spacing: 0.02em;
+        text-transform: uppercase;
+        color: #7dd3fc;
+      }
+
+      .wallet-section table {
+        margin-top: 1.25rem;
+      }
+
+      .protocol-empty {
+        margin-top: 1.25rem;
+        padding: 1.5rem 1rem;
+        border-radius: 12px;
+        border: 1px dashed rgba(148, 163, 184, 0.35);
+        text-align: center;
+        color: #94a3b8;
+        background: rgba(15, 23, 42, 0.45);
+      }
+
+      .protocol-grid {
+        margin-top: 1.5rem;
+        display: grid;
+        gap: 1.5rem;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      }
+
+      .protocol-card {
+        border-radius: 16px;
+        border: 1px solid rgba(148, 163, 184, 0.25);
+        background: rgba(15, 23, 42, 0.65);
+        padding: 1.4rem 1.35rem 1.2rem;
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        box-shadow: inset 0 1px 0 rgba(148, 163, 184, 0.12);
+      }
+
+      .protocol-card-header {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+      }
+
+      .protocol-card-title {
+        margin: 0;
+        font-size: 1.05rem;
+        font-weight: 600;
+        color: #e0f2fe;
+      }
+
+      .protocol-card-label {
+        font-size: 0.85rem;
+        color: #cbd5f5;
+      }
+
+      .protocol-metrics {
+        margin: 0;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.65rem 1rem;
+      }
+
+      .protocol-metrics dt {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: #94a3b8;
+      }
+
+      .protocol-metrics dd {
+        margin: 0;
+        font-size: 0.92rem;
+        color: #e2e8f0;
+        font-weight: 500;
+      }
+
+      .protocol-card-footer {
+        margin-top: auto;
+        display: flex;
+        justify-content: flex-end;
+      }
+
+      .protocol-card-footer a {
+        color: #38bdf8;
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 0.85rem;
+      }
+
+      .protocol-card-footer a:hover {
+        text-decoration: underline;
+      }
+
+      @media (max-width: 720px) {
+        th,
+        td {
+          padding: 0.75rem 0.6rem;
+        }
+
+        table {
+          font-size: 0.9rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="app">
+      <h1>Sui Wallet Holdings Viewer</h1>
+      <p class="description">
+        Inspect the fungible token balances of any Sui wallet. Enter an address
+        to fetch all coin types and their human-readable balances from the
+        public Sui RPC endpoint. This tool is fully client-side and read-only.
+      </p>
+      <form id="wallet-form">
+        <input
+          id="wallet-input"
+          type="text"
+          inputmode="latin"
+          autocomplete="off"
+          spellcheck="false"
+          placeholder="0x..."
+          aria-label="Sui wallet address"
+          required
+        />
+        <button type="submit">Load balances</button>
+      </form>
+      <div class="status" id="status"></div>
+      <div id="results"></div>
+    </main>
+    <template id="balances-template">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">Token</th>
+            <th scope="col">Balance</th>
+            <th scope="col">Coin type</th>
+            <th scope="col" class="actions">Activity</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </template>
+    <template id="empty-template">
+      <div class="empty-state">No fungible token balances found for this wallet.</div>
+    </template>
+    <script>
+      const RPC_URL = "https://fullnode.mainnet.sui.io/";
+      const EXPLORER_BASE = "https://suiexplorer.com/txblock";
+      const MAX_TRANSACTIONS = 40;
+      const MAX_ACTIVITY_ROWS = 10;
+      const form = document.getElementById("wallet-form");
+      const input = document.getElementById("wallet-input");
+      const status = document.getElementById("status");
+      const results = document.getElementById("results");
+      const balancesTpl = document.getElementById("balances-template");
+      const emptyTpl = document.getElementById("empty-template");
+      const metadataCache = new Map();
+      const transactionCache = new Map();
+      const hasBigInt = typeof BigInt === "function";
+      const BIGINT_ZERO = hasBigInt ? BigInt(0) : 0;
+      const EXPLORER_OBJECT_BASE = "https://suiexplorer.com/object";
+      const OBJECT_PAGE_LIMIT = 5;
+      const OBJECT_PAGE_SIZE = 50;
+      const COIN_TYPE_PREFIX = "0x2::coin::Coin<";
+      const PREFERRED_FIELD_KEYS = [
+        "liquidity",
+        "amount",
+        "amount_a",
+        "amount_b",
+        "balance",
+        "borrowed",
+        "supplied",
+        "collateral",
+        "debt",
+        "principal",
+        "side",
+        "size",
+        "entry_price",
+        "leverage",
+        "apr",
+        "apy",
+        "coin_a",
+        "coin_b",
+        "pool_id",
+        "pool",
+        "index",
+      ];
+      const MAX_FIELD_RESULTS = 6;
+      const PROTOCOL_DEFINITIONS = [
+        {
+          name: "Cetus",
+          patterns: ["::cetus", "::clmm"],
+          preferredFields: [
+            "coin_a",
+            "coin_b",
+            "liquidity",
+            "amount_a",
+            "amount_b",
+          ],
+        },
+        {
+          name: "Suilend",
+          patterns: ["::suilend"],
+          preferredFields: ["supplied", "borrowed", "collateral", "debt"],
+        },
+        {
+          name: "Navi Protocol",
+          patterns: ["::navi"],
+          preferredFields: ["supplied", "borrowed", "collateral", "apy"],
+        },
+        {
+          name: "Bluefin",
+          patterns: ["::bluefin", "::perps", "::perpetual"],
+          preferredFields: ["side", "size", "entry_price", "leverage"],
+        },
+      ];
+
+      function toNumeric(value) {
+        if (value === undefined || value === null) {
+          return hasBigInt ? BIGINT_ZERO : 0;
+        }
+
+        try {
+          return hasBigInt ? BigInt(value) : Number(value);
+        } catch (error) {
+          return hasBigInt ? BIGINT_ZERO : 0;
+        }
+      }
+
+      async function fetchRpc(method, params) {
+        const response = await fetch(RPC_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            jsonrpc: "2.0",
+            id: Date.now(),
+            method,
+            params,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`RPC call failed with ${response.status}`);
+        }
+
+        const payload = await response.json();
+        if (payload.error) {
+          throw new Error(payload.error.message || "Unexpected RPC error");
+        }
+
+        return payload.result;
+      }
+
+      async function getBalances(address) {
+        return fetchRpc("suix_getAllBalances", [address]);
+      }
+
+      async function getCoinMetadata(coinType) {
+        if (metadataCache.has(coinType)) {
+          return metadataCache.get(coinType);
+        }
+
+        try {
+          const metadata = await fetchRpc("suix_getCoinMetadata", [coinType]);
+          metadataCache.set(coinType, metadata);
+          return metadata;
+        } catch (error) {
+          console.warn("Failed to load metadata for", coinType, error);
+          metadataCache.set(coinType, null);
+          return null;
+        }
+      }
+
+      function normalizeAddress(raw) {
+        const trimmed = raw.trim();
+        if (!trimmed) {
+          return "";
+        }
+
+        const lower = trimmed.toLowerCase();
+        return lower.startsWith("0x") ? lower : `0x${lower}`;
+      }
+
+      function formatWithDecimals(balance, decimals) {
+        const decimalCount = Number(decimals) || 0;
+
+        if (!hasBigInt) {
+          const divisor = decimalCount ? Math.pow(10, decimalCount) : 1;
+          const numericBalance = Number(balance) / divisor;
+
+          if (!Number.isFinite(numericBalance)) {
+            return String(balance);
+          }
+
+          if (!decimalCount) {
+            return Math.trunc(numericBalance).toString();
+          }
+
+          const fixed = numericBalance.toFixed(Math.min(decimalCount, 6));
+          return fixed.replace(/\.0+$/, "");
+        }
+
+        const units = BigInt(balance);
+        if (!decimalCount) {
+          return units.toString();
+        }
+
+        const divisor = BigInt(10) ** BigInt(decimalCount);
+        const integerPart = units / divisor;
+        const fractionalPart = units % divisor;
+        if (fractionalPart === BIGINT_ZERO) {
+          return integerPart.toString();
+        }
+
+        const paddedFraction = fractionalPart
+          .toString()
+          .padStart(decimalCount, "0")
+          .replace(/0+$/, "");
+        return `${integerPart.toString()}.${paddedFraction}`;
+      }
+
+      function truncateMiddle(value, length = 10) {
+        if (!value || value.length <= length) {
+          return value;
+        }
+
+        const half = Math.floor((length - 3) / 2);
+        return `${value.slice(0, half)}...${value.slice(-half)}`;
+      }
+
+      function formatTimestamp(timestampMs) {
+        if (!timestampMs) {
+          return "Unknown time";
+        }
+
+        const date = new Date(Number(timestampMs));
+        if (Number.isNaN(date.getTime())) {
+          return "Unknown time";
+        }
+
+        return date.toLocaleString(undefined, {
+          hour12: false,
+          year: "numeric",
+          month: "short",
+          day: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+      }
+
+      function toTitleCase(value) {
+        if (!value) {
+          return "";
+        }
+
+        return value
+          .replace(/[_-]+/g, " ")
+          .replace(/\s+/g, " ")
+          .trim()
+          .replace(/\b\w/g, (char) => char.toUpperCase());
+      }
+
+      function identifyProtocolByType(type) {
+        if (!type) {
+          return null;
+        }
+
+        const lower = type.toLowerCase();
+        for (const definition of PROTOCOL_DEFINITIONS) {
+          if (definition.patterns.some((pattern) => lower.includes(pattern))) {
+            return definition;
+          }
+        }
+
+        return null;
+      }
+
+      function valueToString(value) {
+        if (value === null || value === undefined) {
+          return null;
+        }
+
+        if (typeof value === "bigint") {
+          return value.toString();
+        }
+
+        if (typeof value === "number") {
+          return Number.isFinite(value) ? value.toString() : null;
+        }
+
+        if (typeof value === "string") {
+          return value;
+        }
+
+        if (Array.isArray(value)) {
+          const formatted = value
+            .map((item) => valueToString(item))
+            .filter(Boolean);
+          return formatted.length ? formatted.join(", ") : null;
+        }
+
+        if (typeof value === "object") {
+          if (typeof value.id === "string") {
+            return value.id;
+          }
+
+          if (typeof value.objectId === "string") {
+            return value.objectId;
+          }
+
+          if (value.fields) {
+            return valueToString(value.fields);
+          }
+
+          const primitives = [];
+          for (const [key, nested] of Object.entries(value)) {
+            const formatted = valueToString(nested);
+            if (formatted) {
+              primitives.push(`${toTitleCase(key)}: ${formatted}`);
+            }
+            if (primitives.length >= 2) {
+              break;
+            }
+          }
+
+          return primitives.length ? primitives.join(" • ") : null;
+        }
+
+        return String(value);
+      }
+
+      function findFieldValue(fields, targetKey) {
+        if (!fields || typeof fields !== "object") {
+          return undefined;
+        }
+
+        if (Object.prototype.hasOwnProperty.call(fields, targetKey)) {
+          return fields[targetKey];
+        }
+
+        for (const value of Object.values(fields)) {
+          if (value && typeof value === "object") {
+            const nested = findFieldValue(value, targetKey);
+            if (nested !== undefined) {
+              return nested;
+            }
+          }
+        }
+
+        return undefined;
+      }
+
+      function collectFieldEntries(fields, definition) {
+        const metrics = [];
+        const seenKeys = new Set();
+        if (!fields || typeof fields !== "object") {
+          return metrics;
+        }
+
+        const prioritizedKeys = [
+          ...(definition && definition.preferredFields
+            ? definition.preferredFields
+            : []),
+          ...PREFERRED_FIELD_KEYS,
+        ];
+
+        for (const key of prioritizedKeys) {
+          if (seenKeys.has(key)) {
+            continue;
+          }
+
+          const value = findFieldValue(fields, key);
+          const formatted = valueToString(value);
+          if (formatted) {
+            metrics.push({ label: toTitleCase(key), value: formatted });
+            seenKeys.add(key);
+          }
+
+          if (metrics.length >= MAX_FIELD_RESULTS) {
+            return metrics;
+          }
+        }
+
+        for (const [key, value] of Object.entries(fields)) {
+          if (seenKeys.has(key)) {
+            continue;
+          }
+
+          if (typeof value === "object" && value !== null) {
+            const formatted = valueToString(value);
+            if (!formatted) {
+              continue;
+            }
+            metrics.push({ label: toTitleCase(key), value: formatted });
+          } else {
+            const formatted = valueToString(value);
+            if (!formatted) {
+              continue;
+            }
+            metrics.push({ label: toTitleCase(key), value: formatted });
+          }
+
+          if (metrics.length >= MAX_FIELD_RESULTS) {
+            break;
+          }
+        }
+
+        return metrics;
+      }
+
+      function extractDisplayLabel(display) {
+        const data = display && display.data ? display.data : display;
+        if (!data || typeof data !== "object") {
+          return null;
+        }
+
+        for (const key of ["name", "title", "label"]) {
+          const value = data[key];
+          if (typeof value === "string" && value.trim()) {
+            return value.trim();
+          }
+        }
+
+        return null;
+      }
+
+      function createDisplayEntries(display) {
+        const data = display && display.data ? display.data : display;
+        if (!data || typeof data !== "object") {
+          return [];
+        }
+
+        const metrics = [];
+        for (const [key, value] of Object.entries(data)) {
+          if (["name", "title", "label"].includes(key)) {
+            continue;
+          }
+
+          const formatted = valueToString(value);
+          if (!formatted) {
+            continue;
+          }
+
+          metrics.push({ label: toTitleCase(key), value: formatted });
+          if (metrics.length >= MAX_FIELD_RESULTS) {
+            break;
+          }
+        }
+
+        return metrics;
+      }
+
+      function shortenTypeName(value) {
+        if (!value || typeof value !== "string") {
+          return value;
+        }
+
+        const withoutGenerics = value.replace(/<.*>/, "");
+        const parts = withoutGenerics.split("::");
+        return parts[parts.length - 1] || value;
+      }
+
+      function deriveProtocolLabel(definition, fields, type) {
+        if (fields && typeof fields === "object") {
+          const coinA =
+            findFieldValue(fields, "coin_a") ||
+            findFieldValue(fields, "coinA") ||
+            findFieldValue(fields, "token_a");
+          const coinB =
+            findFieldValue(fields, "coin_b") ||
+            findFieldValue(fields, "coinB") ||
+            findFieldValue(fields, "token_b");
+          if (coinA && coinB) {
+            const formattedA = valueToString(coinA) || shortenTypeName(String(coinA));
+            const formattedB = valueToString(coinB) || shortenTypeName(String(coinB));
+            if (formattedA && formattedB) {
+              return `${shortenTypeName(formattedA)} / ${shortenTypeName(formattedB)}`;
+            }
+          }
+
+          const market =
+            findFieldValue(fields, "market") ||
+            findFieldValue(fields, "pool_id") ||
+            findFieldValue(fields, "pool");
+          if (market) {
+            const formattedMarket = valueToString(market);
+            if (formattedMarket) {
+              return formattedMarket;
+            }
+          }
+
+          const asset =
+            findFieldValue(fields, "asset") ||
+            findFieldValue(fields, "coin_type") ||
+            findFieldValue(fields, "reserve");
+          if (asset) {
+            const formattedAsset = valueToString(asset);
+            if (formattedAsset) {
+              return formattedAsset;
+            }
+          }
+        }
+
+        if (definition && definition.name) {
+          return `${definition.name} position`;
+        }
+
+        return truncateMiddle(type, 24);
+      }
+
+      function buildProtocolPosition(objectData) {
+        if (!objectData) {
+          return null;
+        }
+
+        const type =
+          objectData.type ||
+          (objectData.content && objectData.content.type) ||
+          "";
+        if (!type || type.startsWith(COIN_TYPE_PREFIX)) {
+          return null;
+        }
+
+        const definition = identifyProtocolByType(type);
+        if (!definition) {
+          return null;
+        }
+
+        const objectId =
+          objectData.objectId ||
+          (objectData.reference && objectData.reference.objectId) ||
+          (objectData.content &&
+            objectData.content.fields &&
+            valueToString(objectData.content.fields.id)) ||
+          "";
+
+        const display = objectData.display || null;
+        const displayMetrics = createDisplayEntries(display);
+        const displayLabel = extractDisplayLabel(display);
+
+        const fields =
+          (objectData.content && objectData.content.fields) ||
+          objectData.fields ||
+          null;
+
+        const fieldMetrics = collectFieldEntries(fields, definition);
+        const metrics = [];
+        const seen = new Set();
+
+        const pushMetric = (label, value) => {
+          if (!label || !value) {
+            return;
+          }
+
+          const key = `${label}:${value}`;
+          if (seen.has(key)) {
+            return;
+          }
+
+          seen.add(key);
+          metrics.push({ label, value });
+        };
+
+        for (const metric of displayMetrics) {
+          pushMetric(metric.label, metric.value);
+          if (metrics.length >= MAX_FIELD_RESULTS) {
+            break;
+          }
+        }
+
+        if (metrics.length < MAX_FIELD_RESULTS) {
+          for (const metric of fieldMetrics) {
+            pushMetric(metric.label, metric.value);
+            if (metrics.length >= MAX_FIELD_RESULTS) {
+              break;
+            }
+          }
+        }
+
+        pushMetric("Type", truncateMiddle(type, 32));
+        if (objectId) {
+          pushMetric("Object", truncateMiddle(objectId, 16));
+        }
+
+        return {
+          protocol: definition.name,
+          label: displayLabel || deriveProtocolLabel(definition, fields, type),
+          metrics,
+          objectId,
+          type,
+        };
+      }
+
+      function createProtocolCard(position) {
+        const card = document.createElement("article");
+        card.className = "protocol-card";
+
+        const header = document.createElement("div");
+        header.className = "protocol-card-header";
+
+        const title = document.createElement("h3");
+        title.className = "protocol-card-title";
+        title.textContent = position.protocol;
+        header.appendChild(title);
+
+        if (position.label) {
+          const labelEl = document.createElement("span");
+          labelEl.className = "protocol-card-label";
+          labelEl.textContent = position.label;
+          header.appendChild(labelEl);
+        }
+
+        card.appendChild(header);
+
+        if (position.metrics && position.metrics.length) {
+          const dl = document.createElement("dl");
+          dl.className = "protocol-metrics";
+          for (const metric of position.metrics) {
+            const dt = document.createElement("dt");
+            dt.textContent = metric.label;
+            const dd = document.createElement("dd");
+            dd.textContent = metric.value;
+            dl.append(dt, dd);
+          }
+          card.appendChild(dl);
+        }
+
+        if (position.objectId) {
+          const footer = document.createElement("div");
+          footer.className = "protocol-card-footer";
+          const link = document.createElement("a");
+          link.href = `${EXPLORER_OBJECT_BASE}/${position.objectId}?network=mainnet`;
+          link.target = "_blank";
+          link.rel = "noopener noreferrer";
+          link.textContent = "View on explorer";
+          footer.appendChild(link);
+          card.appendChild(footer);
+        }
+
+        return card;
+      }
+
+      function createProtocolSection(positions) {
+        const section = document.createElement("section");
+        section.className = "wallet-section protocol-section";
+
+        const heading = document.createElement("h2");
+        heading.className = "section-heading";
+        heading.textContent = "Protocol positions";
+        section.appendChild(heading);
+
+        if (!positions.length) {
+          const empty = document.createElement("div");
+          empty.className = "protocol-empty";
+          empty.textContent = "No protocol positions detected for this wallet.";
+          section.appendChild(empty);
+          return section;
+        }
+
+        const sorted = positions.slice().sort((a, b) => {
+          return a.protocol.localeCompare(b.protocol);
+        });
+
+        const grid = document.createElement("div");
+        grid.className = "protocol-grid";
+        for (const position of sorted) {
+          grid.appendChild(createProtocolCard(position));
+        }
+        section.appendChild(grid);
+
+        return section;
+      }
+
+      function createTransactionPanel(transactions, decimals, symbol, coinType) {
+        const panel = document.createElement("div");
+        panel.className = "transaction-panel";
+
+        const heading = document.createElement("h3");
+        heading.textContent = "Recent transactions";
+        panel.appendChild(heading);
+
+        if (!transactions.length) {
+          const empty = document.createElement("div");
+          empty.className = "tx-empty";
+          empty.textContent = "No recent balance changes found for this token.";
+          panel.appendChild(empty);
+          return panel;
+        }
+
+        const displayed = transactions.slice(0, MAX_ACTIVITY_ROWS);
+        const list = document.createElement("ul");
+        list.className = "tx-list";
+
+        for (const tx of displayed) {
+          const item = document.createElement("li");
+          item.className = "tx-item";
+
+          const amountSpan = document.createElement("span");
+          amountSpan.className = "tx-amount";
+
+          const amountValue = toNumeric(tx.amount);
+          const direction = hasBigInt
+            ? amountValue >= BIGINT_ZERO
+              ? "in"
+              : "out"
+            : amountValue >= 0
+            ? "in"
+            : "out";
+          amountSpan.classList.add(direction === "in" ? "positive" : "negative");
+
+          const absoluteValue = hasBigInt
+            ? amountValue < BIGINT_ZERO
+              ? BIGINT_ZERO - amountValue
+              : amountValue
+            : Math.abs(amountValue);
+          const absolute = hasBigInt ? absoluteValue.toString() : String(absoluteValue);
+          const formattedAmount = formatWithDecimals(absolute, decimals);
+          const tokenLabel = symbol || truncateMiddle(coinType, 12);
+          amountSpan.textContent = `${direction === "in" ? "+" : "-"}${formattedAmount} ${tokenLabel}`;
+
+          const meta = document.createElement("div");
+          meta.className = "tx-meta";
+
+          const directionLabel = document.createElement("span");
+          directionLabel.textContent = direction === "in" ? "Received" : "Sent";
+
+          const timeLabel = document.createElement("span");
+          timeLabel.textContent = formatTimestamp(tx.timestampMs);
+
+          const link = document.createElement("a");
+          link.href = `${EXPLORER_BASE}/${tx.digest}?network=mainnet`;
+          link.target = "_blank";
+          link.rel = "noopener noreferrer";
+          link.textContent = truncateMiddle(tx.digest, 14);
+
+          meta.append(directionLabel, timeLabel, link);
+          item.append(amountSpan, meta);
+          list.appendChild(item);
+        }
+
+        panel.appendChild(list);
+        return panel;
+      }
+
+      function createTokenSection(rows, transactionsByCoin) {
+        const section = document.createElement("section");
+        section.className = "wallet-section token-section";
+
+        const heading = document.createElement("h2");
+        heading.className = "section-heading";
+        heading.textContent = "Wallet tokens";
+        section.appendChild(heading);
+
+        if (!rows.length) {
+          section.appendChild(emptyTpl.content.cloneNode(true));
+          return section;
+        }
+
+        const tableFragment = balancesTpl.content.cloneNode(true);
+        const tableElement = tableFragment.querySelector("table");
+        const tbody = tableElement.querySelector("tbody");
+
+        for (const row of rows) {
+          const tr = document.createElement("tr");
+          tr.className = "token-row";
+          const tokenCell = document.createElement("td");
+          const balanceCell = document.createElement("td");
+          const typeCell = document.createElement("td");
+          const actionCell = document.createElement("td");
+          actionCell.className = "actions";
+
+          const tokenInfo = document.createElement("div");
+          tokenInfo.className = "token-info";
+
+          const iconWrapper = document.createElement("span");
+          iconWrapper.className = "token-icon";
+          if (row.iconUrl) {
+            const img = document.createElement("img");
+            img.src = row.iconUrl;
+            img.alt = row.symbol ? `${row.symbol} logo` : "Token logo";
+            img.loading = "lazy";
+            iconWrapper.appendChild(img);
+          } else {
+            iconWrapper.textContent = row.symbol ? row.symbol.slice(0, 3) : "?";
+          }
+
+          const meta = document.createElement("div");
+          meta.className = "token-meta";
+          const symbolEl = document.createElement("span");
+          symbolEl.className = "token-symbol";
+          symbolEl.textContent = row.symbol || "Unknown";
+          meta.appendChild(symbolEl);
+          if (row.name) {
+            const nameEl = document.createElement("span");
+            nameEl.className = "token-name";
+            nameEl.textContent = row.name;
+            meta.appendChild(nameEl);
+          }
+
+          tokenInfo.append(iconWrapper, meta);
+          tokenCell.appendChild(tokenInfo);
+          balanceCell.textContent = row.displayBalance;
+          if (row.symbol) {
+            balanceCell.textContent += ` ${row.symbol}`;
+          }
+          typeCell.textContent = row.coinType;
+          typeCell.title = row.coinType;
+
+          const expandBtn = document.createElement("button");
+          expandBtn.type = "button";
+          expandBtn.className = "expand-btn";
+          expandBtn.innerHTML = `
+            <span>View activity</span>
+            <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+              <path fill-rule="evenodd" d="M5.22 7.22a.75.75 0 0 1 1.06 0L10 10.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 8.28a.75.75 0 0 1 0-1.06z" clip-rule="evenodd"></path>
+            </svg>
+          `;
+          expandBtn.setAttribute("aria-expanded", "false");
+          actionCell.appendChild(expandBtn);
+
+          const detailTr = document.createElement("tr");
+          const detailTd = document.createElement("td");
+          detailTd.colSpan = 4;
+          const transactions = transactionsByCoin.get(row.coinType) || [];
+          detailTd.appendChild(
+            createTransactionPanel(transactions, row.decimals, row.symbol, row.coinType)
+          );
+          detailTr.appendChild(detailTd);
+          detailTr.style.display = "none";
+
+          expandBtn.addEventListener("click", () => {
+            const isExpanded = tr.classList.toggle("expanded");
+            detailTr.style.display = isExpanded ? "table-row" : "none";
+            expandBtn.setAttribute("aria-expanded", String(isExpanded));
+            expandBtn.querySelector("span").textContent = isExpanded
+              ? "Hide activity"
+              : "View activity";
+          });
+
+          tr.append(tokenCell, balanceCell, typeCell, actionCell);
+          tbody.append(tr, detailTr);
+        }
+
+        section.appendChild(tableFragment);
+        return section;
+      }
+
+      function renderWallet(rows, transactionsByCoin, protocolPositions) {
+        results.innerHTML = "";
+
+        const fragment = document.createDocumentFragment();
+        fragment.appendChild(createTokenSection(rows, transactionsByCoin));
+        fragment.appendChild(createProtocolSection(protocolPositions));
+
+        results.appendChild(fragment);
+      }
+
+      function extractOwnerAddress(owner) {
+        if (!owner) {
+          return null;
+        }
+
+        if (typeof owner === "string") {
+          return owner;
+        }
+
+        if (owner.AddressOwner) {
+          return owner.AddressOwner;
+        }
+
+        if (owner.GasOwner) {
+          return owner.GasOwner;
+        }
+
+        if (owner.ObjectOwner) {
+          return owner.ObjectOwner;
+        }
+
+        return null;
+      }
+
+      async function getTransactions(address) {
+        if (transactionCache.has(address)) {
+          return transactionCache.get(address);
+        }
+
+        const query = {
+          filter: {
+            Any: [{ FromAddress: address }, { ToAddress: address }],
+          },
+          options: {
+            showBalanceChanges: true,
+            showEffects: true,
+            showInput: false,
+            showEvents: false,
+            showObjectChanges: false,
+          },
+        };
+
+        try {
+          const response = await fetchRpc("suix_queryTransactionBlocks", [
+            query,
+            null,
+            MAX_TRANSACTIONS,
+            true,
+          ]);
+          const transactions = response && Array.isArray(response.data)
+            ? response.data
+            : [];
+          transactionCache.set(address, transactions);
+          return transactions;
+        } catch (error) {
+          console.warn("Failed to load transactions", error);
+          transactionCache.set(address, []);
+          return [];
+        }
+      }
+
+      function groupTransactionsByCoin(transactions, address) {
+        const map = new Map();
+        const normalizedAddress = normalizeAddress(address);
+
+        for (const tx of transactions) {
+          const digest = tx.digest;
+          const timestampMs = tx.timestampMs === undefined || tx.timestampMs === null
+            ? null
+            : tx.timestampMs;
+          const balanceChanges = tx.balanceChanges || [];
+
+          for (const change of balanceChanges) {
+            const ownerAddress = normalizeAddress(extractOwnerAddress(change.owner || null) || "");
+            if (!ownerAddress || ownerAddress !== normalizedAddress) {
+              continue;
+            }
+
+            const coinType = change.coinType;
+            if (!coinType) {
+              continue;
+            }
+
+            if (change.amount === undefined || change.amount === null) {
+              continue;
+            }
+
+            if (!map.has(coinType)) {
+              map.set(coinType, []);
+            }
+
+            const entry = {
+              digest,
+              timestampMs,
+              amount: change.amount,
+            };
+            map.get(coinType).push(entry);
+          }
+        }
+
+        for (const [coinType, entries] of map.entries()) {
+          entries.sort((a, b) => {
+            const aTime = a.timestampMs ? Number(a.timestampMs) : 0;
+            const bTime = b.timestampMs ? Number(b.timestampMs) : 0;
+            return bTime - aTime;
+          });
+          map.set(coinType, entries);
+        }
+
+        return map;
+      }
+
+      async function getProtocolPositions(address) {
+        const positions = [];
+        const seenIds = new Set();
+        let cursor = null;
+        let pageCount = 0;
+
+        while (pageCount < OBJECT_PAGE_LIMIT) {
+          let response;
+          try {
+            response = await fetchRpc("suix_getOwnedObjects", [
+              address,
+              cursor,
+              OBJECT_PAGE_SIZE,
+              {
+                showType: true,
+                showContent: true,
+                showDisplay: true,
+              },
+            ]);
+          } catch (error) {
+            console.warn("Failed to load protocol positions", error);
+            break;
+          }
+
+          pageCount += 1;
+          const data = response && Array.isArray(response.data) ? response.data : [];
+          for (const entry of data) {
+            const objectData = entry && entry.data ? entry.data : entry;
+            const position = buildProtocolPosition(objectData);
+            if (!position) {
+              continue;
+            }
+
+            if (position.objectId && seenIds.has(position.objectId)) {
+              continue;
+            }
+
+            if (position.objectId) {
+              seenIds.add(position.objectId);
+            }
+
+            positions.push(position);
+          }
+
+          if (!response || !response.hasNextPage || !response.nextCursor) {
+            break;
+          }
+
+          cursor = response.nextCursor;
+        }
+
+        return positions;
+      }
+
+      async function handleSubmit(event) {
+        event.preventDefault();
+        const address = normalizeAddress(input.value);
+        if (!address) {
+          return;
+        }
+
+        status.textContent = "Fetching balances...";
+        status.style.color = "#38bdf8";
+        results.innerHTML = "";
+        form.querySelector("button").disabled = true;
+
+        try {
+          const [balances, transactions, protocolPositions] = await Promise.all([
+            getBalances(address),
+            getTransactions(address),
+            getProtocolPositions(address),
+          ]);
+          const transactionsByCoin = groupTransactionsByCoin(transactions, address);
+          const rows = await Promise.all(
+            (balances || []).map(async (balance) => {
+              const metadata = await getCoinMetadata(balance.coinType);
+              const decimalsValue = metadata && metadata.decimals !== undefined
+                ? Number(metadata.decimals)
+                : 0;
+              const safeDecimals = Number.isFinite(decimalsValue) ? decimalsValue : 0;
+              const symbol = metadata && metadata.symbol ? metadata.symbol : null;
+              const name = metadata && metadata.name ? metadata.name : null;
+              const iconUrl = metadata && metadata.iconUrl ? metadata.iconUrl : null;
+              const displayBalance = formatWithDecimals(
+                balance.totalBalance,
+                safeDecimals
+              );
+
+              return {
+                coinType: balance.coinType,
+                displayBalance,
+                symbol,
+                name,
+                iconUrl,
+                decimals: safeDecimals,
+                rawBalance: balance.totalBalance,
+              };
+            })
+          );
+
+          const sortedRows = rows
+            .sort((a, b) => {
+              try {
+                if (hasBigInt) {
+                  const diff = BigInt(b.rawBalance) - BigInt(a.rawBalance);
+                  if (diff > BIGINT_ZERO) return 1;
+                  if (diff < BIGINT_ZERO) return -1;
+                } else {
+                  const diff = Number(b.rawBalance) - Number(a.rawBalance);
+                  if (Number.isFinite(diff) && diff !== 0) {
+                    return diff > 0 ? 1 : -1;
+                  }
+                }
+              } catch (error) {
+                // ignore differences we cannot compare
+              }
+              return 0;
+            })
+            .map(({ rawBalance, ...rest }) => rest);
+
+          renderWallet(sortedRows, transactionsByCoin, protocolPositions);
+          status.textContent = `Loaded ${sortedRows.length} token${
+            sortedRows.length === 1 ? "" : "s"
+          } and ${protocolPositions.length} protocol position${
+            protocolPositions.length === 1 ? "" : "s"
+          }.`;
+          status.style.color = "#34d399";
+        } catch (error) {
+          console.error(error);
+          status.textContent = error.message || "Something went wrong.";
+          status.style.color = "#f87171";
+        } finally {
+          form.querySelector("button").disabled = false;
+        }
+      }
+
+      form.addEventListener("submit", handleSubmit);
+    </script>
+  </body>
+</html>
