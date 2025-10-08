@@ -290,6 +290,110 @@
         color: #94a3b8;
       }
 
+      .wallet-section {
+        margin-top: 2.5rem;
+      }
+
+      .wallet-section:first-of-type {
+        margin-top: 0;
+      }
+
+      .section-heading {
+        margin: 0;
+        font-size: 1.15rem;
+        letter-spacing: 0.02em;
+        text-transform: uppercase;
+        color: #7dd3fc;
+      }
+
+      .wallet-section table {
+        margin-top: 1.25rem;
+      }
+
+      .protocol-empty {
+        margin-top: 1.25rem;
+        padding: 1.5rem 1rem;
+        border-radius: 12px;
+        border: 1px dashed rgba(148, 163, 184, 0.35);
+        text-align: center;
+        color: #94a3b8;
+        background: rgba(15, 23, 42, 0.45);
+      }
+
+      .protocol-grid {
+        margin-top: 1.5rem;
+        display: grid;
+        gap: 1.5rem;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      }
+
+      .protocol-card {
+        border-radius: 16px;
+        border: 1px solid rgba(148, 163, 184, 0.25);
+        background: rgba(15, 23, 42, 0.65);
+        padding: 1.4rem 1.35rem 1.2rem;
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        box-shadow: inset 0 1px 0 rgba(148, 163, 184, 0.12);
+      }
+
+      .protocol-card-header {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+      }
+
+      .protocol-card-title {
+        margin: 0;
+        font-size: 1.05rem;
+        font-weight: 600;
+        color: #e0f2fe;
+      }
+
+      .protocol-card-label {
+        font-size: 0.85rem;
+        color: #cbd5f5;
+      }
+
+      .protocol-metrics {
+        margin: 0;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.65rem 1rem;
+      }
+
+      .protocol-metrics dt {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: #94a3b8;
+      }
+
+      .protocol-metrics dd {
+        margin: 0;
+        font-size: 0.92rem;
+        color: #e2e8f0;
+        font-weight: 500;
+      }
+
+      .protocol-card-footer {
+        margin-top: auto;
+        display: flex;
+        justify-content: flex-end;
+      }
+
+      .protocol-card-footer a {
+        color: #38bdf8;
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 0.85rem;
+      }
+
+      .protocol-card-footer a:hover {
+        text-decoration: underline;
+      }
+
       @media (max-width: 720px) {
         th,
         td {
@@ -357,6 +461,62 @@
       const transactionCache = new Map();
       const hasBigInt = typeof BigInt === "function";
       const BIGINT_ZERO = hasBigInt ? BigInt(0) : 0;
+      const EXPLORER_OBJECT_BASE = "https://suiexplorer.com/object";
+      const OBJECT_PAGE_LIMIT = 5;
+      const OBJECT_PAGE_SIZE = 50;
+      const COIN_TYPE_PREFIX = "0x2::coin::Coin<";
+      const PREFERRED_FIELD_KEYS = [
+        "liquidity",
+        "amount",
+        "amount_a",
+        "amount_b",
+        "balance",
+        "borrowed",
+        "supplied",
+        "collateral",
+        "debt",
+        "principal",
+        "side",
+        "size",
+        "entry_price",
+        "leverage",
+        "apr",
+        "apy",
+        "coin_a",
+        "coin_b",
+        "pool_id",
+        "pool",
+        "index",
+      ];
+      const MAX_FIELD_RESULTS = 6;
+      const PROTOCOL_DEFINITIONS = [
+        {
+          name: "Cetus",
+          patterns: ["::cetus", "::clmm"],
+          preferredFields: [
+            "coin_a",
+            "coin_b",
+            "liquidity",
+            "amount_a",
+            "amount_b",
+          ],
+        },
+        {
+          name: "Suilend",
+          patterns: ["::suilend"],
+          preferredFields: ["supplied", "borrowed", "collateral", "debt"],
+        },
+        {
+          name: "Navi Protocol",
+          patterns: ["::navi"],
+          preferredFields: ["supplied", "borrowed", "collateral", "apy"],
+        },
+        {
+          name: "Bluefin",
+          patterns: ["::bluefin", "::perps", "::perpetual"],
+          preferredFields: ["side", "size", "entry_price", "leverage"],
+        },
+      ];
 
       function toNumeric(value) {
         if (value === undefined || value === null) {
@@ -493,6 +653,429 @@
         });
       }
 
+      function toTitleCase(value) {
+        if (!value) {
+          return "";
+        }
+
+        return value
+          .replace(/[_-]+/g, " ")
+          .replace(/\s+/g, " ")
+          .trim()
+          .replace(/\b\w/g, (char) => char.toUpperCase());
+      }
+
+      function identifyProtocolByType(type) {
+        if (!type) {
+          return null;
+        }
+
+        const lower = type.toLowerCase();
+        for (const definition of PROTOCOL_DEFINITIONS) {
+          if (definition.patterns.some((pattern) => lower.includes(pattern))) {
+            return definition;
+          }
+        }
+
+        return null;
+      }
+
+      function valueToString(value) {
+        if (value === null || value === undefined) {
+          return null;
+        }
+
+        if (typeof value === "bigint") {
+          return value.toString();
+        }
+
+        if (typeof value === "number") {
+          return Number.isFinite(value) ? value.toString() : null;
+        }
+
+        if (typeof value === "string") {
+          return value;
+        }
+
+        if (Array.isArray(value)) {
+          const formatted = value
+            .map((item) => valueToString(item))
+            .filter(Boolean);
+          return formatted.length ? formatted.join(", ") : null;
+        }
+
+        if (typeof value === "object") {
+          if (typeof value.id === "string") {
+            return value.id;
+          }
+
+          if (typeof value.objectId === "string") {
+            return value.objectId;
+          }
+
+          if (value.fields) {
+            return valueToString(value.fields);
+          }
+
+          const primitives = [];
+          for (const [key, nested] of Object.entries(value)) {
+            const formatted = valueToString(nested);
+            if (formatted) {
+              primitives.push(`${toTitleCase(key)}: ${formatted}`);
+            }
+            if (primitives.length >= 2) {
+              break;
+            }
+          }
+
+          return primitives.length ? primitives.join(" • ") : null;
+        }
+
+        return String(value);
+      }
+
+      function findFieldValue(fields, targetKey) {
+        if (!fields || typeof fields !== "object") {
+          return undefined;
+        }
+
+        if (Object.prototype.hasOwnProperty.call(fields, targetKey)) {
+          return fields[targetKey];
+        }
+
+        for (const value of Object.values(fields)) {
+          if (value && typeof value === "object") {
+            const nested = findFieldValue(value, targetKey);
+            if (nested !== undefined) {
+              return nested;
+            }
+          }
+        }
+
+        return undefined;
+      }
+
+      function collectFieldEntries(fields, definition) {
+        const metrics = [];
+        const seenKeys = new Set();
+        if (!fields || typeof fields !== "object") {
+          return metrics;
+        }
+
+        const prioritizedKeys = [
+          ...(definition && definition.preferredFields
+            ? definition.preferredFields
+            : []),
+          ...PREFERRED_FIELD_KEYS,
+        ];
+
+        for (const key of prioritizedKeys) {
+          if (seenKeys.has(key)) {
+            continue;
+          }
+
+          const value = findFieldValue(fields, key);
+          const formatted = valueToString(value);
+          if (formatted) {
+            metrics.push({ label: toTitleCase(key), value: formatted });
+            seenKeys.add(key);
+          }
+
+          if (metrics.length >= MAX_FIELD_RESULTS) {
+            return metrics;
+          }
+        }
+
+        for (const [key, value] of Object.entries(fields)) {
+          if (seenKeys.has(key)) {
+            continue;
+          }
+
+          if (typeof value === "object" && value !== null) {
+            const formatted = valueToString(value);
+            if (!formatted) {
+              continue;
+            }
+            metrics.push({ label: toTitleCase(key), value: formatted });
+          } else {
+            const formatted = valueToString(value);
+            if (!formatted) {
+              continue;
+            }
+            metrics.push({ label: toTitleCase(key), value: formatted });
+          }
+
+          if (metrics.length >= MAX_FIELD_RESULTS) {
+            break;
+          }
+        }
+
+        return metrics;
+      }
+
+      function extractDisplayLabel(display) {
+        const data = display && display.data ? display.data : display;
+        if (!data || typeof data !== "object") {
+          return null;
+        }
+
+        for (const key of ["name", "title", "label"]) {
+          const value = data[key];
+          if (typeof value === "string" && value.trim()) {
+            return value.trim();
+          }
+        }
+
+        return null;
+      }
+
+      function createDisplayEntries(display) {
+        const data = display && display.data ? display.data : display;
+        if (!data || typeof data !== "object") {
+          return [];
+        }
+
+        const metrics = [];
+        for (const [key, value] of Object.entries(data)) {
+          if (["name", "title", "label"].includes(key)) {
+            continue;
+          }
+
+          const formatted = valueToString(value);
+          if (!formatted) {
+            continue;
+          }
+
+          metrics.push({ label: toTitleCase(key), value: formatted });
+          if (metrics.length >= MAX_FIELD_RESULTS) {
+            break;
+          }
+        }
+
+        return metrics;
+      }
+
+      function shortenTypeName(value) {
+        if (!value || typeof value !== "string") {
+          return value;
+        }
+
+        const withoutGenerics = value.replace(/<.*>/, "");
+        const parts = withoutGenerics.split("::");
+        return parts[parts.length - 1] || value;
+      }
+
+      function deriveProtocolLabel(definition, fields, type) {
+        if (fields && typeof fields === "object") {
+          const coinA =
+            findFieldValue(fields, "coin_a") ||
+            findFieldValue(fields, "coinA") ||
+            findFieldValue(fields, "token_a");
+          const coinB =
+            findFieldValue(fields, "coin_b") ||
+            findFieldValue(fields, "coinB") ||
+            findFieldValue(fields, "token_b");
+          if (coinA && coinB) {
+            const formattedA = valueToString(coinA) || shortenTypeName(String(coinA));
+            const formattedB = valueToString(coinB) || shortenTypeName(String(coinB));
+            if (formattedA && formattedB) {
+              return `${shortenTypeName(formattedA)} / ${shortenTypeName(formattedB)}`;
+            }
+          }
+
+          const market =
+            findFieldValue(fields, "market") ||
+            findFieldValue(fields, "pool_id") ||
+            findFieldValue(fields, "pool");
+          if (market) {
+            const formattedMarket = valueToString(market);
+            if (formattedMarket) {
+              return formattedMarket;
+            }
+          }
+
+          const asset =
+            findFieldValue(fields, "asset") ||
+            findFieldValue(fields, "coin_type") ||
+            findFieldValue(fields, "reserve");
+          if (asset) {
+            const formattedAsset = valueToString(asset);
+            if (formattedAsset) {
+              return formattedAsset;
+            }
+          }
+        }
+
+        if (definition && definition.name) {
+          return `${definition.name} position`;
+        }
+
+        return truncateMiddle(type, 24);
+      }
+
+      function buildProtocolPosition(objectData) {
+        if (!objectData) {
+          return null;
+        }
+
+        const type =
+          objectData.type ||
+          (objectData.content && objectData.content.type) ||
+          "";
+        if (!type || type.startsWith(COIN_TYPE_PREFIX)) {
+          return null;
+        }
+
+        const definition = identifyProtocolByType(type);
+        if (!definition) {
+          return null;
+        }
+
+        const objectId =
+          objectData.objectId ||
+          (objectData.reference && objectData.reference.objectId) ||
+          (objectData.content &&
+            objectData.content.fields &&
+            valueToString(objectData.content.fields.id)) ||
+          "";
+
+        const display = objectData.display || null;
+        const displayMetrics = createDisplayEntries(display);
+        const displayLabel = extractDisplayLabel(display);
+
+        const fields =
+          (objectData.content && objectData.content.fields) ||
+          objectData.fields ||
+          null;
+
+        const fieldMetrics = collectFieldEntries(fields, definition);
+        const metrics = [];
+        const seen = new Set();
+
+        const pushMetric = (label, value) => {
+          if (!label || !value) {
+            return;
+          }
+
+          const key = `${label}:${value}`;
+          if (seen.has(key)) {
+            return;
+          }
+
+          seen.add(key);
+          metrics.push({ label, value });
+        };
+
+        for (const metric of displayMetrics) {
+          pushMetric(metric.label, metric.value);
+          if (metrics.length >= MAX_FIELD_RESULTS) {
+            break;
+          }
+        }
+
+        if (metrics.length < MAX_FIELD_RESULTS) {
+          for (const metric of fieldMetrics) {
+            pushMetric(metric.label, metric.value);
+            if (metrics.length >= MAX_FIELD_RESULTS) {
+              break;
+            }
+          }
+        }
+
+        pushMetric("Type", truncateMiddle(type, 32));
+        if (objectId) {
+          pushMetric("Object", truncateMiddle(objectId, 16));
+        }
+
+        return {
+          protocol: definition.name,
+          label: displayLabel || deriveProtocolLabel(definition, fields, type),
+          metrics,
+          objectId,
+          type,
+        };
+      }
+
+      function createProtocolCard(position) {
+        const card = document.createElement("article");
+        card.className = "protocol-card";
+
+        const header = document.createElement("div");
+        header.className = "protocol-card-header";
+
+        const title = document.createElement("h3");
+        title.className = "protocol-card-title";
+        title.textContent = position.protocol;
+        header.appendChild(title);
+
+        if (position.label) {
+          const labelEl = document.createElement("span");
+          labelEl.className = "protocol-card-label";
+          labelEl.textContent = position.label;
+          header.appendChild(labelEl);
+        }
+
+        card.appendChild(header);
+
+        if (position.metrics && position.metrics.length) {
+          const dl = document.createElement("dl");
+          dl.className = "protocol-metrics";
+          for (const metric of position.metrics) {
+            const dt = document.createElement("dt");
+            dt.textContent = metric.label;
+            const dd = document.createElement("dd");
+            dd.textContent = metric.value;
+            dl.append(dt, dd);
+          }
+          card.appendChild(dl);
+        }
+
+        if (position.objectId) {
+          const footer = document.createElement("div");
+          footer.className = "protocol-card-footer";
+          const link = document.createElement("a");
+          link.href = `${EXPLORER_OBJECT_BASE}/${position.objectId}?network=mainnet`;
+          link.target = "_blank";
+          link.rel = "noopener noreferrer";
+          link.textContent = "View on explorer";
+          footer.appendChild(link);
+          card.appendChild(footer);
+        }
+
+        return card;
+      }
+
+      function createProtocolSection(positions) {
+        const section = document.createElement("section");
+        section.className = "wallet-section protocol-section";
+
+        const heading = document.createElement("h2");
+        heading.className = "section-heading";
+        heading.textContent = "Protocol positions";
+        section.appendChild(heading);
+
+        if (!positions.length) {
+          const empty = document.createElement("div");
+          empty.className = "protocol-empty";
+          empty.textContent = "No protocol positions detected for this wallet.";
+          section.appendChild(empty);
+          return section;
+        }
+
+        const sorted = positions.slice().sort((a, b) => {
+          return a.protocol.localeCompare(b.protocol);
+        });
+
+        const grid = document.createElement("div");
+        grid.className = "protocol-grid";
+        for (const position of sorted) {
+          grid.appendChild(createProtocolCard(position));
+        }
+        section.appendChild(grid);
+
+        return section;
+      }
+
       function createTransactionPanel(transactions, decimals, symbol, coinType) {
         const panel = document.createElement("div");
         panel.className = "transaction-panel";
@@ -564,15 +1147,24 @@
         return panel;
       }
 
-      function renderBalances(rows, transactionsByCoin) {
-        results.innerHTML = "";
+      function createTokenSection(rows, transactionsByCoin) {
+        const section = document.createElement("section");
+        section.className = "wallet-section token-section";
+
+        const heading = document.createElement("h2");
+        heading.className = "section-heading";
+        heading.textContent = "Wallet tokens";
+        section.appendChild(heading);
+
         if (!rows.length) {
-          results.appendChild(emptyTpl.content.cloneNode(true));
-          return;
+          section.appendChild(emptyTpl.content.cloneNode(true));
+          return section;
         }
 
-        const table = balancesTpl.content.cloneNode(true);
-        const tbody = table.querySelector("tbody");
+        const tableFragment = balancesTpl.content.cloneNode(true);
+        const tableElement = tableFragment.querySelector("table");
+        const tbody = tableElement.querySelector("tbody");
+
         for (const row of rows) {
           const tr = document.createElement("tr");
           tr.className = "token-row";
@@ -654,7 +1246,18 @@
           tbody.append(tr, detailTr);
         }
 
-        results.appendChild(table);
+        section.appendChild(tableFragment);
+        return section;
+      }
+
+      function renderWallet(rows, transactionsByCoin, protocolPositions) {
+        results.innerHTML = "";
+
+        const fragment = document.createDocumentFragment();
+        fragment.appendChild(createTokenSection(rows, transactionsByCoin));
+        fragment.appendChild(createProtocolSection(protocolPositions));
+
+        results.appendChild(fragment);
       }
 
       function extractOwnerAddress(owner) {
@@ -769,6 +1372,60 @@
         return map;
       }
 
+      async function getProtocolPositions(address) {
+        const positions = [];
+        const seenIds = new Set();
+        let cursor = null;
+        let pageCount = 0;
+
+        while (pageCount < OBJECT_PAGE_LIMIT) {
+          let response;
+          try {
+            response = await fetchRpc("suix_getOwnedObjects", [
+              address,
+              cursor,
+              OBJECT_PAGE_SIZE,
+              {
+                showType: true,
+                showContent: true,
+                showDisplay: true,
+              },
+            ]);
+          } catch (error) {
+            console.warn("Failed to load protocol positions", error);
+            break;
+          }
+
+          pageCount += 1;
+          const data = response && Array.isArray(response.data) ? response.data : [];
+          for (const entry of data) {
+            const objectData = entry && entry.data ? entry.data : entry;
+            const position = buildProtocolPosition(objectData);
+            if (!position) {
+              continue;
+            }
+
+            if (position.objectId && seenIds.has(position.objectId)) {
+              continue;
+            }
+
+            if (position.objectId) {
+              seenIds.add(position.objectId);
+            }
+
+            positions.push(position);
+          }
+
+          if (!response || !response.hasNextPage || !response.nextCursor) {
+            break;
+          }
+
+          cursor = response.nextCursor;
+        }
+
+        return positions;
+      }
+
       async function handleSubmit(event) {
         event.preventDefault();
         const address = normalizeAddress(input.value);
@@ -782,9 +1439,10 @@
         form.querySelector("button").disabled = true;
 
         try {
-          const [balances, transactions] = await Promise.all([
+          const [balances, transactions, protocolPositions] = await Promise.all([
             getBalances(address),
             getTransactions(address),
+            getProtocolPositions(address),
           ]);
           const transactionsByCoin = groupTransactionsByCoin(transactions, address);
           const rows = await Promise.all(
@@ -834,8 +1492,12 @@
             })
             .map(({ rawBalance, ...rest }) => rest);
 
-          renderBalances(sortedRows, transactionsByCoin);
-          status.textContent = `Loaded ${sortedRows.length} token${sortedRows.length === 1 ? "" : "s"}.`;
+          renderWallet(sortedRows, transactionsByCoin, protocolPositions);
+          status.textContent = `Loaded ${sortedRows.length} token${
+            sortedRows.length === 1 ? "" : "s"
+          } and ${protocolPositions.length} protocol position${
+            protocolPositions.length === 1 ? "" : "s"
+          }.`;
           status.style.color = "#34d399";
         } catch (error) {
           console.error(error);

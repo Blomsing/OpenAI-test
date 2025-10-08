@@ -1,11 +1,13 @@
 # Sui Wallet Holdings Viewer
 
 This repository now hosts a single-page web application that inspects the
-fungible token balances inside any Sui wallet. The app is **read only** and
-runs entirely in the browser – it never signs or submits transactions. When you
-enter a wallet address the page queries Sui's public JSON-RPC endpoint to list
-all detected coin types with human readable balances and expandable activity
-history for each token, complete with coin artwork when available.
+fungible token balances and protocol positions inside any Sui wallet. The app
+is **read only** and runs entirely in the browser – it never signs or submits
+transactions. When you enter a wallet address the page queries Sui's public
+JSON-RPC endpoint to list all detected coin types with human readable balances,
+expandable activity history for each token, and a dedicated section that
+summarises positions held in well-known protocols such as Cetus, Suilend, Navi
+Protocol, and Bluefin.
 
 ## Running locally
 
@@ -45,6 +47,9 @@ Netlify, or Cloudflare Pages.
   with `suix_queryTransactionBlocks`, groups the balance changes per coin type,
   sorts them by recency, and renders the latest entries in expandable panels
   beneath each token row.
+* Fetches owned objects via `suix_getOwnedObjects`, filters for well-known DeFi
+  packages, and formats any detected liquidity, lending, or perpetual position
+  metadata into protocol cards shown beneath the token table.
 * Converts the raw integer balances and balance deltas into human-friendly
   amounts using the metadata and displays the results in a responsive table.
 
@@ -57,6 +62,10 @@ Netlify, or Cloudflare Pages.
   proxy under your control.
 * Each token activity panel shows up to the 10 most recent balance changes for
   that coin to keep the UI scannable.
+* Protocol detection relies on known object type patterns for Cetus, Suilend,
+  Navi Protocol, and Bluefin. Objects that don't expose meaningful metadata may
+  appear with generic labels until the underlying packages publish richer
+  display data.
 * Older browsers that lack native `BigInt` support will still load the page,
   but large integer balances are rounded using regular JavaScript numbers. A
   current Chromium, Firefox, or Safari release provides the most accurate
