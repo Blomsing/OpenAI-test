@@ -410,6 +410,7 @@
 
         const lower = trimmed.toLowerCase();
         return lower.startsWith("0x") ? lower : `0x${lower}`;
+        return raw.trim();
       }
 
       function formatWithDecimals(balance, decimals) {
@@ -522,6 +523,7 @@
       }
 
       function renderBalances(rows, transactionsByCoin) {
+      function renderBalances(rows) {
         results.innerHTML = "";
         if (!rows.length) {
           results.appendChild(emptyTpl.content.cloneNode(true));
@@ -720,6 +722,19 @@
         }
 
         return map;
+          const tokenCell = document.createElement("td");
+          const balanceCell = document.createElement("td");
+          const typeCell = document.createElement("td");
+
+          tokenCell.innerHTML = `<span class="badge">${row.symbol || "Unknown"}</span>`;
+          balanceCell.textContent = row.displayBalance;
+          typeCell.textContent = row.coinType;
+
+          tr.append(tokenCell, balanceCell, typeCell);
+          tbody.appendChild(tr);
+        }
+
+        results.appendChild(table);
       }
 
       async function handleSubmit(event) {
@@ -772,6 +787,24 @@
 
           renderBalances(sortedRows, transactionsByCoin);
           status.textContent = `Loaded ${sortedRows.length} token${sortedRows.length === 1 ? "" : "s"}.`;
+          const balances = await getBalances(address);
+          const rows = [];
+
+          for (const balance of balances || []) {
+            const metadata = await getCoinMetadata(balance.coinType);
+            const decimals = metadata?.decimals ?? 0;
+            const symbol = metadata?.symbol ?? null;
+            const displayBalance = formatWithDecimals(balance.totalBalance, decimals);
+
+            rows.push({
+              coinType: balance.coinType,
+              displayBalance,
+              symbol,
+            });
+          }
+
+          renderBalances(rows);
+          status.textContent = `Loaded ${rows.length} token${rows.length === 1 ? "" : "s"}.`;
           status.style.color = "#34d399";
         } catch (error) {
           console.error(error);
