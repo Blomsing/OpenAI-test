@@ -128,12 +128,6 @@
         text-align: left;
       }
 
-      th.actions,
-      td.actions {
-        text-align: right;
-        width: 120px;
-      }
-
       tbody tr:nth-child(even) {
         background: rgba(15, 23, 42, 0.45);
       }
@@ -148,140 +142,6 @@
         color: #e0f2fe;
         font-size: 0.78rem;
         letter-spacing: 0.04em;
-      }
-
-      .token-info {
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-      }
-
-      .token-icon {
-        width: 36px;
-        height: 36px;
-        border-radius: 50%;
-        overflow: hidden;
-        background: rgba(148, 163, 184, 0.25);
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 0.85rem;
-        color: #cbd5f5;
-        flex-shrink: 0;
-      }
-
-      .token-icon img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        display: block;
-      }
-
-      .token-symbol {
-        font-weight: 600;
-        font-size: 1rem;
-      }
-
-      .token-name {
-        font-size: 0.78rem;
-        color: #cbd5f5;
-        margin-top: 0.15rem;
-      }
-
-      .token-meta {
-        display: flex;
-        flex-direction: column;
-      }
-
-      .expand-btn {
-        border: 1px solid rgba(148, 163, 184, 0.35);
-        background: transparent;
-        color: inherit;
-        border-radius: 999px;
-        padding: 0.4rem 0.95rem;
-        font-size: 0.85rem;
-        display: inline-flex;
-        align-items: center;
-        gap: 0.35rem;
-      }
-
-      .expand-btn svg {
-        width: 16px;
-        height: 16px;
-        transition: transform 0.2s ease;
-      }
-
-      tr.expanded .expand-btn svg {
-        transform: rotate(180deg);
-      }
-
-      .transaction-panel {
-        background: rgba(15, 23, 42, 0.75);
-        padding: 1.25rem 1.5rem 1.5rem;
-        border-top: 1px solid rgba(148, 163, 184, 0.15);
-      }
-
-      .transaction-panel h3 {
-        margin: 0 0 0.75rem;
-        font-size: 0.95rem;
-        color: #38bdf8;
-        letter-spacing: 0.04em;
-        text-transform: uppercase;
-      }
-
-      .tx-list {
-        list-style: none;
-        margin: 0;
-        padding: 0;
-        display: flex;
-        flex-direction: column;
-        gap: 0.9rem;
-      }
-
-      .tx-item {
-        display: flex;
-        justify-content: space-between;
-        gap: 0.75rem;
-        border-bottom: 1px solid rgba(148, 163, 184, 0.12);
-        padding-bottom: 0.75rem;
-      }
-
-      .tx-item:last-child {
-        border-bottom: none;
-        padding-bottom: 0;
-      }
-
-      .tx-amount {
-        font-weight: 600;
-        font-size: 0.95rem;
-      }
-
-      .tx-amount.positive {
-        color: #34d399;
-      }
-
-      .tx-amount.negative {
-        color: #f87171;
-      }
-
-      .tx-meta {
-        display: flex;
-        flex-direction: column;
-        gap: 0.25rem;
-        font-size: 0.8rem;
-        color: #cbd5f5;
-      }
-
-      .tx-meta a {
-        color: #38bdf8;
-        text-decoration: none;
-        font-weight: 600;
-      }
-
-      .tx-empty {
-        color: #94a3b8;
-        font-size: 0.9rem;
-        padding: 1rem 0 0.25rem;
       }
 
       .empty-state {
@@ -333,7 +193,6 @@
             <th scope="col">Token</th>
             <th scope="col">Balance</th>
             <th scope="col">Coin type</th>
-            <th scope="col" class="actions">Activity</th>
           </tr>
         </thead>
         <tbody></tbody>
@@ -344,8 +203,6 @@
     </template>
     <script>
       const RPC_URL = "https://fullnode.mainnet.sui.io/";
-      const EXPLORER_BASE = "https://suiexplorer.com/txblock";
-      const MAX_TRANSACTIONS = 40;
       const form = document.getElementById("wallet-form");
       const input = document.getElementById("wallet-input");
       const status = document.getElementById("status");
@@ -353,7 +210,6 @@
       const balancesTpl = document.getElementById("balances-template");
       const emptyTpl = document.getElementById("empty-template");
       const metadataCache = new Map();
-      const transactionCache = new Map();
 
       async function fetchRpc(method, params) {
         const response = await fetch(RPC_URL, {
@@ -402,13 +258,7 @@
       }
 
       function normalizeAddress(raw) {
-        const trimmed = raw.trim();
-        if (!trimmed) {
-          return "";
-        }
-
-        const lower = trimmed.toLowerCase();
-        return lower.startsWith("0x") ? lower : `0x${lower}`;
+        return raw.trim();
       }
 
       function formatWithDecimals(balance, decimals) {
@@ -431,95 +281,7 @@
         return `${integerPart.toString()}.${paddedFraction}`;
       }
 
-      function truncateMiddle(value, length = 10) {
-        if (!value || value.length <= length) {
-          return value;
-        }
-
-        const half = Math.floor((length - 3) / 2);
-        return `${value.slice(0, half)}...${value.slice(-half)}`;
-      }
-
-      function formatTimestamp(timestampMs) {
-        if (!timestampMs) {
-          return "Unknown time";
-        }
-
-        const date = new Date(Number(timestampMs));
-        if (Number.isNaN(date.getTime())) {
-          return "Unknown time";
-        }
-
-        return date.toLocaleString(undefined, {
-          hour12: false,
-          year: "numeric",
-          month: "short",
-          day: "2-digit",
-          hour: "2-digit",
-          minute: "2-digit",
-        });
-      }
-
-      function createTransactionPanel(transactions, decimals, symbol, coinType) {
-        const panel = document.createElement("div");
-        panel.className = "transaction-panel";
-
-        const heading = document.createElement("h3");
-        heading.textContent = "Recent transactions";
-        panel.appendChild(heading);
-
-        if (!transactions.length) {
-          const empty = document.createElement("div");
-          empty.className = "tx-empty";
-          empty.textContent = "No recent balance changes found for this token.";
-          panel.appendChild(empty);
-          return panel;
-        }
-
-        const list = document.createElement("ul");
-        list.className = "tx-list";
-
-        for (const tx of transactions) {
-          const item = document.createElement("li");
-          item.className = "tx-item";
-
-          const amountSpan = document.createElement("span");
-          amountSpan.className = "tx-amount";
-
-          const amountBigInt = BigInt(tx.amount);
-          const direction = amountBigInt >= 0n ? "in" : "out";
-          amountSpan.classList.add(direction === "in" ? "positive" : "negative");
-
-          const absolute = amountBigInt < 0n ? (-amountBigInt).toString() : amountBigInt.toString();
-          const formattedAmount = formatWithDecimals(absolute, decimals);
-          const tokenLabel = symbol || truncateMiddle(coinType, 12);
-          amountSpan.textContent = `${direction === "in" ? "+" : "-"}${formattedAmount} ${tokenLabel}`;
-
-          const meta = document.createElement("div");
-          meta.className = "tx-meta";
-
-          const directionLabel = document.createElement("span");
-          directionLabel.textContent = direction === "in" ? "Received" : "Sent";
-
-          const timeLabel = document.createElement("span");
-          timeLabel.textContent = formatTimestamp(tx.timestampMs);
-
-          const link = document.createElement("a");
-          link.href = `${EXPLORER_BASE}/${tx.digest}?network=mainnet`;
-          link.target = "_blank";
-          link.rel = "noopener noreferrer";
-          link.textContent = truncateMiddle(tx.digest, 14);
-
-          meta.append(directionLabel, timeLabel, link);
-          item.append(amountSpan, meta);
-          list.appendChild(item);
-        }
-
-        panel.appendChild(list);
-        return panel;
-      }
-
-      function renderBalances(rows, transactionsByCoin) {
+      function renderBalances(rows) {
         results.innerHTML = "";
         if (!rows.length) {
           results.appendChild(emptyTpl.content.cloneNode(true));
@@ -530,181 +292,19 @@
         const tbody = table.querySelector("tbody");
         for (const row of rows) {
           const tr = document.createElement("tr");
-          tr.className = "token-row";
           const tokenCell = document.createElement("td");
           const balanceCell = document.createElement("td");
           const typeCell = document.createElement("td");
-          const actionCell = document.createElement("td");
-          actionCell.className = "actions";
 
-          const tokenInfo = document.createElement("div");
-          tokenInfo.className = "token-info";
-
-          const iconWrapper = document.createElement("span");
-          iconWrapper.className = "token-icon";
-          if (row.iconUrl) {
-            const img = document.createElement("img");
-            img.src = row.iconUrl;
-            img.alt = row.symbol ? `${row.symbol} logo` : "Token logo";
-            img.loading = "lazy";
-            iconWrapper.appendChild(img);
-          } else {
-            iconWrapper.textContent = row.symbol?.slice(0, 3) || "?";
-          }
-
-          const meta = document.createElement("div");
-          meta.className = "token-meta";
-          const symbolEl = document.createElement("span");
-          symbolEl.className = "token-symbol";
-          symbolEl.textContent = row.symbol || "Unknown";
-          meta.appendChild(symbolEl);
-          if (row.name) {
-            const nameEl = document.createElement("span");
-            nameEl.className = "token-name";
-            nameEl.textContent = row.name;
-            meta.appendChild(nameEl);
-          }
-
-          tokenInfo.append(iconWrapper, meta);
-          tokenCell.appendChild(tokenInfo);
+          tokenCell.innerHTML = `<span class="badge">${row.symbol || "Unknown"}</span>`;
           balanceCell.textContent = row.displayBalance;
           typeCell.textContent = row.coinType;
-          typeCell.title = row.coinType;
 
-          const expandBtn = document.createElement("button");
-          expandBtn.type = "button";
-          expandBtn.className = "expand-btn";
-          expandBtn.innerHTML = `
-            <span>View activity</span>
-            <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-              <path fill-rule="evenodd" d="M5.22 7.22a.75.75 0 0 1 1.06 0L10 10.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 8.28a.75.75 0 0 1 0-1.06z" clip-rule="evenodd"></path>
-            </svg>
-          `;
-          expandBtn.setAttribute("aria-expanded", "false");
-          actionCell.appendChild(expandBtn);
-
-          const detailTr = document.createElement("tr");
-          const detailTd = document.createElement("td");
-          detailTd.colSpan = 4;
-          const transactions = transactionsByCoin.get(row.coinType) || [];
-          detailTd.appendChild(
-            createTransactionPanel(transactions, row.decimals, row.symbol, row.coinType)
-          );
-          detailTr.appendChild(detailTd);
-          detailTr.style.display = "none";
-
-          expandBtn.addEventListener("click", () => {
-            const isExpanded = tr.classList.toggle("expanded");
-            detailTr.style.display = isExpanded ? "table-row" : "none";
-            expandBtn.setAttribute("aria-expanded", String(isExpanded));
-            expandBtn.querySelector("span").textContent = isExpanded
-              ? "Hide activity"
-              : "View activity";
-          });
-
-          tr.append(tokenCell, balanceCell, typeCell, actionCell);
-          tbody.append(tr, detailTr);
+          tr.append(tokenCell, balanceCell, typeCell);
+          tbody.appendChild(tr);
         }
 
         results.appendChild(table);
-      }
-
-      function extractOwnerAddress(owner) {
-        if (!owner) {
-          return null;
-        }
-
-        if (typeof owner === "string") {
-          return owner;
-        }
-
-        if (owner.AddressOwner) {
-          return owner.AddressOwner;
-        }
-
-        if (owner.GasOwner) {
-          return owner.GasOwner;
-        }
-
-        if (owner.ObjectOwner) {
-          return owner.ObjectOwner;
-        }
-
-        return null;
-      }
-
-      async function getTransactions(address) {
-        if (transactionCache.has(address)) {
-          return transactionCache.get(address);
-        }
-
-        const query = {
-          filter: {
-            Any: [{ FromAddress: address }, { ToAddress: address }],
-          },
-          options: {
-            showBalanceChanges: true,
-            showEffects: true,
-            showInput: false,
-            showEvents: false,
-            showObjectChanges: false,
-          },
-        };
-
-        try {
-          const response = await fetchRpc("suix_queryTransactionBlocks", [
-            query,
-            null,
-            MAX_TRANSACTIONS,
-            true,
-          ]);
-          const transactions = response?.data ?? [];
-          transactionCache.set(address, transactions);
-          return transactions;
-        } catch (error) {
-          console.warn("Failed to load transactions", error);
-          transactionCache.set(address, []);
-          return [];
-        }
-      }
-
-      function groupTransactionsByCoin(transactions, address) {
-        const map = new Map();
-        const normalizedAddress = normalizeAddress(address);
-
-        for (const tx of transactions) {
-          const digest = tx.digest;
-          const timestampMs = tx.timestampMs ?? null;
-          const balanceChanges = tx.balanceChanges || [];
-
-          for (const change of balanceChanges) {
-            const ownerAddress = normalizeAddress(extractOwnerAddress(change.owner || null) || "");
-            if (!ownerAddress || ownerAddress !== normalizedAddress) {
-              continue;
-            }
-
-            const coinType = change.coinType;
-            if (!coinType) {
-              continue;
-            }
-
-            if (change.amount === undefined || change.amount === null) {
-              continue;
-            }
-
-            if (!map.has(coinType)) {
-              map.set(coinType, []);
-            }
-
-            map.get(coinType).push({
-              digest,
-              timestampMs,
-              amount: change.amount,
-            });
-          }
-        }
-
-        return map;
       }
 
       async function handleSubmit(event) {
@@ -720,12 +320,8 @@
         form.querySelector("button").disabled = true;
 
         try {
-          const [balances, transactions] = await Promise.all([
-            getBalances(address),
-            getTransactions(address),
-          ]);
+          const balances = await getBalances(address);
           const rows = [];
-          const transactionsByCoin = groupTransactionsByCoin(transactions, address);
 
           for (const balance of balances || []) {
             const metadata = await getCoinMetadata(balance.coinType);
@@ -737,13 +333,10 @@
               coinType: balance.coinType,
               displayBalance,
               symbol,
-              name: metadata?.name ?? null,
-              iconUrl: metadata?.iconUrl ?? null,
-              decimals,
             });
           }
 
-          renderBalances(rows, transactionsByCoin);
+          renderBalances(rows);
           status.textContent = `Loaded ${rows.length} token${rows.length === 1 ? "" : "s"}.`;
           status.style.color = "#34d399";
         } catch (error) {

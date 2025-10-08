@@ -4,8 +4,7 @@ This repository now hosts a single-page web application that inspects the
 fungible token balances inside any Sui wallet. The app is **read only** and
 runs entirely in the browser – it never signs or submits transactions. When you
 enter a wallet address the page queries Sui's public JSON-RPC endpoint to list
-all detected coin types with human readable balances and expandable activity
-history for each token, complete with coin artwork when available.
+all detected coin types with human readable balances.
 
 ## Running locally
 
@@ -39,13 +38,10 @@ Netlify, or Cloudflare Pages.
 
 * Submits `suix_getAllBalances` JSON-RPC requests to fetch all coin types owned
   by an address.
-* Queries `suix_getCoinMetadata` for each coin type to resolve symbols, names,
-  icons, and decimals.
-* Pulls recent transactions that either send or receive assets for the wallet
-  with `suix_queryTransactionBlocks`, groups the balance changes per coin type,
-  and renders them in expandable panels beneath each token row.
-* Converts the raw integer balances and balance deltas into human-friendly
-  amounts using the metadata and displays the results in a responsive table.
+* Queries `suix_getCoinMetadata` for each coin type to resolve symbols and
+  decimals.
+* Converts the raw integer balances into human-friendly amounts using the
+  metadata and displays the results in a responsive table.
 
 ## Notes
 
