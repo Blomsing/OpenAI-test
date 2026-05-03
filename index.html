@@ -1,852 +1,230 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Sui Wallet Holdings Viewer</title>
-    <style>
-      :root {
-        color-scheme: light dark;
-        font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-        background-color: #0f172a;
-        color: #e2e8f0;
-      }
-
-      body {
-        margin: 0;
-        min-height: 100vh;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 2rem 1.25rem 3rem;
-        background: radial-gradient(circle at top, #1e293b, #0f172a 55%);
-      }
-
-      .app {
-        width: min(960px, 100%);
-        background: rgba(15, 23, 42, 0.75);
-        backdrop-filter: blur(18px);
-        border-radius: 18px;
-        border: 1px solid rgba(148, 163, 184, 0.25);
-        padding: 2.5rem 2rem 2rem;
-        box-shadow: 0 30px 80px rgba(15, 23, 42, 0.45);
-      }
-
-      h1 {
-        margin: 0 0 1.5rem;
-        font-size: clamp(2rem, 3vw + 1rem, 3.2rem);
-        font-weight: 700;
-        letter-spacing: -0.03em;
-        color: #38bdf8;
-        text-align: center;
-      }
-
-      p.description {
-        margin: 0 auto 1.75rem;
-        max-width: 620px;
-        line-height: 1.6;
-        text-align: center;
-        color: #cbd5f5;
-      }
-
-      form {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.75rem;
-        justify-content: center;
-        margin-bottom: 1.75rem;
-      }
-
-      input[type="text"] {
-        flex: 1 1 320px;
-        min-width: 240px;
-        padding: 0.85rem 1.1rem;
-        border-radius: 12px;
-        border: 1px solid rgba(148, 163, 184, 0.35);
-        background: rgba(15, 23, 42, 0.75);
-        color: inherit;
-        font-size: 1rem;
-        transition: border 0.2s ease, box-shadow 0.2s ease;
-      }
-
-      input[type="text"]:focus {
-        outline: none;
-        border-color: #38bdf8;
-        box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.25);
-      }
-
-      button {
-        padding: 0.85rem 1.5rem;
-        border-radius: 12px;
-        border: none;
-        background: linear-gradient(135deg, #22d3ee, #3b82f6);
-        color: #0f172a;
-        font-weight: 600;
-        font-size: 1rem;
-        cursor: pointer;
-        transition: transform 0.15s ease, box-shadow 0.2s ease;
-      }
-
-      button:hover {
-        transform: translateY(-1px);
-        box-shadow: 0 12px 20px rgba(56, 189, 248, 0.25);
-      }
-
-      button:disabled {
-        opacity: 0.6;
-        cursor: not-allowed;
-        box-shadow: none;
-        transform: none;
-      }
-
-      .status {
-        min-height: 1.5rem;
-        text-align: center;
-        font-size: 0.95rem;
-        margin-bottom: 1rem;
-      }
-
-      table {
-        width: 100%;
-        border-collapse: collapse;
-        background: rgba(15, 23, 42, 0.6);
-        overflow: hidden;
-        border-radius: 12px;
-      }
-
-      thead {
-        background: rgba(56, 189, 248, 0.15);
-        color: #7dd3fc;
-        text-transform: uppercase;
-        letter-spacing: 0.08em;
-        font-size: 0.75rem;
-      }
-
-      th,
-      td {
-        padding: 0.95rem 1rem;
-        text-align: left;
-      }
-
-      th.actions,
-      td.actions {
-        text-align: right;
-        width: 120px;
-      }
-
-      tbody tr:nth-child(even) {
-        background: rgba(15, 23, 42, 0.45);
-      }
-
-      .badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.35rem;
-        padding: 0.35rem 0.6rem;
-        border-radius: 999px;
-        background: rgba(56, 189, 248, 0.18);
-        color: #e0f2fe;
-        font-size: 0.78rem;
-        letter-spacing: 0.04em;
-      }
-
-      .token-info {
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-      }
-
-      .token-icon {
-        width: 36px;
-        height: 36px;
-        border-radius: 50%;
-        overflow: hidden;
-        background: rgba(148, 163, 184, 0.25);
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 0.85rem;
-        color: #cbd5f5;
-        flex-shrink: 0;
-      }
-
-      .token-icon img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        display: block;
-      }
-
-      .token-symbol {
-        font-weight: 600;
-        font-size: 1rem;
-      }
-
-      .token-name {
-        font-size: 0.78rem;
-        color: #cbd5f5;
-        margin-top: 0.15rem;
-      }
-
-      .token-meta {
-        display: flex;
-        flex-direction: column;
-      }
-
-      .expand-btn {
-        border: 1px solid rgba(148, 163, 184, 0.35);
-        background: transparent;
-        color: inherit;
-        border-radius: 999px;
-        padding: 0.4rem 0.95rem;
-        font-size: 0.85rem;
-        display: inline-flex;
-        align-items: center;
-        gap: 0.35rem;
-      }
-
-      .expand-btn svg {
-        width: 16px;
-        height: 16px;
-        transition: transform 0.2s ease;
-      }
-
-      tr.expanded .expand-btn svg {
-        transform: rotate(180deg);
-      }
-
-      .transaction-panel {
-        background: rgba(15, 23, 42, 0.75);
-        padding: 1.25rem 1.5rem 1.5rem;
-        border-top: 1px solid rgba(148, 163, 184, 0.15);
-      }
-
-      .transaction-panel h3 {
-        margin: 0 0 0.75rem;
-        font-size: 0.95rem;
-        color: #38bdf8;
-        letter-spacing: 0.04em;
-        text-transform: uppercase;
-      }
-
-      .tx-list {
-        list-style: none;
-        margin: 0;
-        padding: 0;
-        display: flex;
-        flex-direction: column;
-        gap: 0.9rem;
-      }
-
-      .tx-item {
-        display: flex;
-        justify-content: space-between;
-        gap: 0.75rem;
-        border-bottom: 1px solid rgba(148, 163, 184, 0.12);
-        padding-bottom: 0.75rem;
-      }
-
-      .tx-item:last-child {
-        border-bottom: none;
-        padding-bottom: 0;
-      }
-
-      .tx-amount {
-        font-weight: 600;
-        font-size: 0.95rem;
-      }
-
-      .tx-amount.positive {
-        color: #34d399;
-      }
-
-      .tx-amount.negative {
-        color: #f87171;
-      }
-
-      .tx-meta {
-        display: flex;
-        flex-direction: column;
-        gap: 0.25rem;
-        font-size: 0.8rem;
-        color: #cbd5f5;
-      }
-
-      .tx-meta a {
-        color: #38bdf8;
-        text-decoration: none;
-        font-weight: 600;
-      }
-
-      .tx-empty {
-        color: #94a3b8;
-        font-size: 0.9rem;
-        padding: 1rem 0 0.25rem;
-      }
-
-      .empty-state {
-        text-align: center;
-        padding: 2.5rem 1rem 1.5rem;
-        color: #94a3b8;
-      }
-
-      @media (max-width: 720px) {
-        th,
-        td {
-          padding: 0.75rem 0.6rem;
-        }
-
-        table {
-          font-size: 0.9rem;
-        }
-      }
-    </style>
-  </head>
-  <body>
-    <main class="app">
-      <h1>Sui Wallet Holdings Viewer</h1>
-      <p class="description">
-        Inspect the fungible token balances of any Sui wallet. Enter an address
-        to fetch all coin types and their human-readable balances from the
-        public Sui RPC endpoint. This tool is fully client-side and read-only.
-      </p>
-      <form id="wallet-form">
-        <input
-          id="wallet-input"
-          type="text"
-          inputmode="latin"
-          autocomplete="off"
-          spellcheck="false"
-          placeholder="0x..."
-          aria-label="Sui wallet address"
-          required
-        />
-        <button type="submit">Load balances</button>
-      </form>
-      <div class="status" id="status"></div>
-      <div id="results"></div>
-    </main>
-    <template id="balances-template">
-      <table>
-        <thead>
-          <tr>
-            <th scope="col">Token</th>
-            <th scope="col">Balance</th>
-            <th scope="col">Coin type</th>
-            <th scope="col" class="actions">Activity</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-    </template>
-    <template id="empty-template">
-      <div class="empty-state">No fungible token balances found for this wallet.</div>
-    </template>
-    <script>
-      const RPC_URL = "https://fullnode.mainnet.sui.io/";
-      const EXPLORER_BASE = "https://suiexplorer.com/txblock";
-      const MAX_TRANSACTIONS = 40;
-      const MAX_ACTIVITY_ROWS = 10;
-      const form = document.getElementById("wallet-form");
-      const input = document.getElementById("wallet-input");
-      const status = document.getElementById("status");
-      const results = document.getElementById("results");
-      const balancesTpl = document.getElementById("balances-template");
-      const emptyTpl = document.getElementById("empty-template");
-      const metadataCache = new Map();
-      const transactionCache = new Map();
-      const hasBigInt = typeof BigInt === "function";
-      const BIGINT_ZERO = hasBigInt ? BigInt(0) : 0;
-
-      function toNumeric(value) {
-        if (value === undefined || value === null) {
-          return hasBigInt ? BIGINT_ZERO : 0;
-        }
-
-        try {
-          return hasBigInt ? BigInt(value) : Number(value);
-        } catch (error) {
-          return hasBigInt ? BIGINT_ZERO : 0;
-        }
-      }
-
-      async function fetchRpc(method, params) {
-        const response = await fetch(RPC_URL, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            jsonrpc: "2.0",
-            id: Date.now(),
-            method,
-            params,
-          }),
-        });
-
-        if (!response.ok) {
-          throw new Error(`RPC call failed with ${response.status}`);
-        }
-
-        const payload = await response.json();
-        if (payload.error) {
-          throw new Error(payload.error.message || "Unexpected RPC error");
-        }
-
-        return payload.result;
-      }
-
-      async function getBalances(address) {
-        return fetchRpc("suix_getAllBalances", [address]);
-      }
-
-      async function getCoinMetadata(coinType) {
-        if (metadataCache.has(coinType)) {
-          return metadataCache.get(coinType);
-        }
-
-        try {
-          const metadata = await fetchRpc("suix_getCoinMetadata", [coinType]);
-          metadataCache.set(coinType, metadata);
-          return metadata;
-        } catch (error) {
-          console.warn("Failed to load metadata for", coinType, error);
-          metadataCache.set(coinType, null);
-          return null;
-        }
-      }
-
-      function normalizeAddress(raw) {
-        const trimmed = raw.trim();
-        if (!trimmed) {
-          return "";
-        }
-
-        const lower = trimmed.toLowerCase();
-        return lower.startsWith("0x") ? lower : `0x${lower}`;
-      }
-
-      function formatWithDecimals(balance, decimals) {
-        const decimalCount = Number(decimals) || 0;
-
-        if (!hasBigInt) {
-          const divisor = decimalCount ? Math.pow(10, decimalCount) : 1;
-          const numericBalance = Number(balance) / divisor;
-
-          if (!Number.isFinite(numericBalance)) {
-            return String(balance);
-          }
-
-          if (!decimalCount) {
-            return Math.trunc(numericBalance).toString();
-          }
-
-          const fixed = numericBalance.toFixed(Math.min(decimalCount, 6));
-          return fixed.replace(/\.0+$/, "");
-        }
-
-        const units = BigInt(balance);
-        if (!decimalCount) {
-          return units.toString();
-        }
-
-        const divisor = BigInt(10) ** BigInt(decimalCount);
-        const integerPart = units / divisor;
-        const fractionalPart = units % divisor;
-        if (fractionalPart === BIGINT_ZERO) {
-          return integerPart.toString();
-        }
-
-        const paddedFraction = fractionalPart
-          .toString()
-          .padStart(decimalCount, "0")
-          .replace(/0+$/, "");
-        return `${integerPart.toString()}.${paddedFraction}`;
-      }
-
-      function truncateMiddle(value, length = 10) {
-        if (!value || value.length <= length) {
-          return value;
-        }
-
-        const half = Math.floor((length - 3) / 2);
-        return `${value.slice(0, half)}...${value.slice(-half)}`;
-      }
-
-      function formatTimestamp(timestampMs) {
-        if (!timestampMs) {
-          return "Unknown time";
-        }
-
-        const date = new Date(Number(timestampMs));
-        if (Number.isNaN(date.getTime())) {
-          return "Unknown time";
-        }
-
-        return date.toLocaleString(undefined, {
-          hour12: false,
-          year: "numeric",
-          month: "short",
-          day: "2-digit",
-          hour: "2-digit",
-          minute: "2-digit",
-        });
-      }
-
-      function createTransactionPanel(transactions, decimals, symbol, coinType) {
-        const panel = document.createElement("div");
-        panel.className = "transaction-panel";
-
-        const heading = document.createElement("h3");
-        heading.textContent = "Recent transactions";
-        panel.appendChild(heading);
-
-        if (!transactions.length) {
-          const empty = document.createElement("div");
-          empty.className = "tx-empty";
-          empty.textContent = "No recent balance changes found for this token.";
-          panel.appendChild(empty);
-          return panel;
-        }
-
-        const displayed = transactions.slice(0, MAX_ACTIVITY_ROWS);
-        const list = document.createElement("ul");
-        list.className = "tx-list";
-
-        for (const tx of displayed) {
-          const item = document.createElement("li");
-          item.className = "tx-item";
-
-          const amountSpan = document.createElement("span");
-          amountSpan.className = "tx-amount";
-
-          const amountValue = toNumeric(tx.amount);
-          const direction = hasBigInt
-            ? amountValue >= BIGINT_ZERO
-              ? "in"
-              : "out"
-            : amountValue >= 0
-            ? "in"
-            : "out";
-          amountSpan.classList.add(direction === "in" ? "positive" : "negative");
-
-          const absoluteValue = hasBigInt
-            ? amountValue < BIGINT_ZERO
-              ? BIGINT_ZERO - amountValue
-              : amountValue
-            : Math.abs(amountValue);
-          const absolute = hasBigInt ? absoluteValue.toString() : String(absoluteValue);
-          const formattedAmount = formatWithDecimals(absolute, decimals);
-          const tokenLabel = symbol || truncateMiddle(coinType, 12);
-          amountSpan.textContent = `${direction === "in" ? "+" : "-"}${formattedAmount} ${tokenLabel}`;
-
-          const meta = document.createElement("div");
-          meta.className = "tx-meta";
-
-          const directionLabel = document.createElement("span");
-          directionLabel.textContent = direction === "in" ? "Received" : "Sent";
-
-          const timeLabel = document.createElement("span");
-          timeLabel.textContent = formatTimestamp(tx.timestampMs);
-
-          const link = document.createElement("a");
-          link.href = `${EXPLORER_BASE}/${tx.digest}?network=mainnet`;
-          link.target = "_blank";
-          link.rel = "noopener noreferrer";
-          link.textContent = truncateMiddle(tx.digest, 14);
-
-          meta.append(directionLabel, timeLabel, link);
-          item.append(amountSpan, meta);
-          list.appendChild(item);
-        }
-
-        panel.appendChild(list);
-        return panel;
-      }
-
-      function renderBalances(rows, transactionsByCoin) {
-        results.innerHTML = "";
-        if (!rows.length) {
-          results.appendChild(emptyTpl.content.cloneNode(true));
-          return;
-        }
-
-        const table = balancesTpl.content.cloneNode(true);
-        const tbody = table.querySelector("tbody");
-        for (const row of rows) {
-          const tr = document.createElement("tr");
-          tr.className = "token-row";
-          const tokenCell = document.createElement("td");
-          const balanceCell = document.createElement("td");
-          const typeCell = document.createElement("td");
-          const actionCell = document.createElement("td");
-          actionCell.className = "actions";
-
-          const tokenInfo = document.createElement("div");
-          tokenInfo.className = "token-info";
-
-          const iconWrapper = document.createElement("span");
-          iconWrapper.className = "token-icon";
-          if (row.iconUrl) {
-            const img = document.createElement("img");
-            img.src = row.iconUrl;
-            img.alt = row.symbol ? `${row.symbol} logo` : "Token logo";
-            img.loading = "lazy";
-            iconWrapper.appendChild(img);
-          } else {
-            iconWrapper.textContent = row.symbol ? row.symbol.slice(0, 3) : "?";
-          }
-
-          const meta = document.createElement("div");
-          meta.className = "token-meta";
-          const symbolEl = document.createElement("span");
-          symbolEl.className = "token-symbol";
-          symbolEl.textContent = row.symbol || "Unknown";
-          meta.appendChild(symbolEl);
-          if (row.name) {
-            const nameEl = document.createElement("span");
-            nameEl.className = "token-name";
-            nameEl.textContent = row.name;
-            meta.appendChild(nameEl);
-          }
-
-          tokenInfo.append(iconWrapper, meta);
-          tokenCell.appendChild(tokenInfo);
-          balanceCell.textContent = row.displayBalance;
-          if (row.symbol) {
-            balanceCell.textContent += ` ${row.symbol}`;
-          }
-          typeCell.textContent = row.coinType;
-          typeCell.title = row.coinType;
-
-          const expandBtn = document.createElement("button");
-          expandBtn.type = "button";
-          expandBtn.className = "expand-btn";
-          expandBtn.innerHTML = `
-            <span>View activity</span>
-            <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-              <path fill-rule="evenodd" d="M5.22 7.22a.75.75 0 0 1 1.06 0L10 10.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 8.28a.75.75 0 0 1 0-1.06z" clip-rule="evenodd"></path>
-            </svg>
-          `;
-          expandBtn.setAttribute("aria-expanded", "false");
-          actionCell.appendChild(expandBtn);
-
-          const detailTr = document.createElement("tr");
-          const detailTd = document.createElement("td");
-          detailTd.colSpan = 4;
-          const transactions = transactionsByCoin.get(row.coinType) || [];
-          detailTd.appendChild(
-            createTransactionPanel(transactions, row.decimals, row.symbol, row.coinType)
-          );
-          detailTr.appendChild(detailTd);
-          detailTr.style.display = "none";
-
-          expandBtn.addEventListener("click", () => {
-            const isExpanded = tr.classList.toggle("expanded");
-            detailTr.style.display = isExpanded ? "table-row" : "none";
-            expandBtn.setAttribute("aria-expanded", String(isExpanded));
-            expandBtn.querySelector("span").textContent = isExpanded
-              ? "Hide activity"
-              : "View activity";
-          });
-
-          tr.append(tokenCell, balanceCell, typeCell, actionCell);
-          tbody.append(tr, detailTr);
-        }
-
-        results.appendChild(table);
-      }
-
-      function extractOwnerAddress(owner) {
-        if (!owner) {
-          return null;
-        }
-
-        if (typeof owner === "string") {
-          return owner;
-        }
-
-        if (owner.AddressOwner) {
-          return owner.AddressOwner;
-        }
-
-        if (owner.GasOwner) {
-          return owner.GasOwner;
-        }
-
-        if (owner.ObjectOwner) {
-          return owner.ObjectOwner;
-        }
-
-        return null;
-      }
-
-      async function getTransactions(address) {
-        if (transactionCache.has(address)) {
-          return transactionCache.get(address);
-        }
-
-        const query = {
-          filter: {
-            Any: [{ FromAddress: address }, { ToAddress: address }],
-          },
-          options: {
-            showBalanceChanges: true,
-            showEffects: true,
-            showInput: false,
-            showEvents: false,
-            showObjectChanges: false,
-          },
-        };
-
-        try {
-          const response = await fetchRpc("suix_queryTransactionBlocks", [
-            query,
-            null,
-            MAX_TRANSACTIONS,
-            true,
-          ]);
-          const transactions = response && Array.isArray(response.data)
-            ? response.data
-            : [];
-          transactionCache.set(address, transactions);
-          return transactions;
-        } catch (error) {
-          console.warn("Failed to load transactions", error);
-          transactionCache.set(address, []);
-          return [];
-        }
-      }
-
-      function groupTransactionsByCoin(transactions, address) {
-        const map = new Map();
-        const normalizedAddress = normalizeAddress(address);
-
-        for (const tx of transactions) {
-          const digest = tx.digest;
-          const timestampMs = tx.timestampMs === undefined || tx.timestampMs === null
-            ? null
-            : tx.timestampMs;
-          const balanceChanges = tx.balanceChanges || [];
-
-          for (const change of balanceChanges) {
-            const ownerAddress = normalizeAddress(extractOwnerAddress(change.owner || null) || "");
-            if (!ownerAddress || ownerAddress !== normalizedAddress) {
-              continue;
-            }
-
-            const coinType = change.coinType;
-            if (!coinType) {
-              continue;
-            }
-
-            if (change.amount === undefined || change.amount === null) {
-              continue;
-            }
-
-            if (!map.has(coinType)) {
-              map.set(coinType, []);
-            }
-
-            const entry = {
-              digest,
-              timestampMs,
-              amount: change.amount,
-            };
-            map.get(coinType).push(entry);
-          }
-        }
-
-        for (const [coinType, entries] of map.entries()) {
-          entries.sort((a, b) => {
-            const aTime = a.timestampMs ? Number(a.timestampMs) : 0;
-            const bTime = b.timestampMs ? Number(b.timestampMs) : 0;
-            return bTime - aTime;
-          });
-          map.set(coinType, entries);
-        }
-
-        return map;
-      }
-
-      async function handleSubmit(event) {
-        event.preventDefault();
-        const address = normalizeAddress(input.value);
-        if (!address) {
-          return;
-        }
-
-        status.textContent = "Fetching balances...";
-        status.style.color = "#38bdf8";
-        results.innerHTML = "";
-        form.querySelector("button").disabled = true;
-
-        try {
-          const [balances, transactions] = await Promise.all([
-            getBalances(address),
-            getTransactions(address),
-          ]);
-          const transactionsByCoin = groupTransactionsByCoin(transactions, address);
-          const rows = await Promise.all(
-            (balances || []).map(async (balance) => {
-              const metadata = await getCoinMetadata(balance.coinType);
-              const decimalsValue = metadata && metadata.decimals !== undefined
-                ? Number(metadata.decimals)
-                : 0;
-              const safeDecimals = Number.isFinite(decimalsValue) ? decimalsValue : 0;
-              const symbol = metadata && metadata.symbol ? metadata.symbol : null;
-              const name = metadata && metadata.name ? metadata.name : null;
-              const iconUrl = metadata && metadata.iconUrl ? metadata.iconUrl : null;
-              const displayBalance = formatWithDecimals(
-                balance.totalBalance,
-                safeDecimals
-              );
-
-              return {
-                coinType: balance.coinType,
-                displayBalance,
-                symbol,
-                name,
-                iconUrl,
-                decimals: safeDecimals,
-                rawBalance: balance.totalBalance,
-              };
-            })
-          );
-
-          const sortedRows = rows
-            .sort((a, b) => {
-              try {
-                if (hasBigInt) {
-                  const diff = BigInt(b.rawBalance) - BigInt(a.rawBalance);
-                  if (diff > BIGINT_ZERO) return 1;
-                  if (diff < BIGINT_ZERO) return -1;
-                } else {
-                  const diff = Number(b.rawBalance) - Number(a.rawBalance);
-                  if (Number.isFinite(diff) && diff !== 0) {
-                    return diff > 0 ? 1 : -1;
-                  }
-                }
-              } catch (error) {
-                // ignore differences we cannot compare
-              }
-              return 0;
-            })
-            .map(({ rawBalance, ...rest }) => rest);
-
-          renderBalances(sortedRows, transactionsByCoin);
-          status.textContent = `Loaded ${sortedRows.length} token${sortedRows.length === 1 ? "" : "s"}.`;
-          status.style.color = "#34d399";
-        } catch (error) {
-          console.error(error);
-          status.textContent = error.message || "Something went wrong.";
-          status.style.color = "#f87171";
-        } finally {
-          form.querySelector("button").disabled = false;
-        }
-      }
-
-      form.addEventListener("submit", handleSubmit);
-    </script>
-  </body>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Living City Ruler-RPG (Prototype)</title>
+  <style>
+    :root { color-scheme: dark; }
+    body { margin:0; font-family: Inter, system-ui, sans-serif; background:#0b1020; color:#e5e7eb; }
+    .wrap { display:grid; grid-template-columns: 340px 1fr; min-height:100vh; }
+    .panel { padding:16px; border-right:1px solid #1f2937; background:#0f172a; overflow:auto; }
+    h1 { font-size:1.1rem; margin:0 0 10px; color:#7dd3fc; }
+    h2 { font-size:0.9rem; margin:14px 0 6px; color:#93c5fd; }
+    .row { display:flex; justify-content:space-between; margin:4px 0; font-size:0.86rem; }
+    .slider { height:8px; background:#1f2937; border-radius:999px; overflow:hidden; }
+    .slider > div { height:100%; }
+    .btns { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px; }
+    button { background:#1d4ed8; color:white; border:none; border-radius:8px; padding:8px; cursor:pointer; font-size:0.8rem; }
+    button:hover { background:#2563eb; }
+    button:disabled { opacity:.4; cursor:not-allowed; }
+    .log { margin-top:8px; font-size:.78rem; background:#020617; border:1px solid #1f2937; border-radius:8px; padding:8px; height:180px; overflow:auto; }
+    canvas { width:100%; height:100vh; display:block; background:#111827; }
+    .hint { font-size:0.75rem; color:#9ca3af; margin-top:6px; }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <aside class="panel">
+    <h1>Living City Ruler-RPG</h1>
+    <div class="row"><span>Month / Week</span><strong id="time"></strong></div>
+    <div class="row"><span>Treasury</span><strong id="treasury"></strong></div>
+    <div class="row"><span>Influence</span><strong id="influence"></strong></div>
+    <div class="row"><span>Personal Wealth</span><strong id="wealth"></strong></div>
+
+    <h2>Identity Sliders</h2>
+    <div class="row"><span>Morality</span><span id="moralityLabel"></span></div>
+    <div class="slider"><div id="moralityBar"></div></div>
+    <div class="row"><span>Civic Culture</span><span id="cultureLabel"></span></div>
+    <div class="slider"><div id="cultureBar"></div></div>
+    <div class="row"><span>Faith</span><span id="faithLabel"></span></div>
+    <div class="slider"><div id="faithBar"></div></div>
+
+    <h2>Conditions</h2>
+    <div id="conditions"></div>
+
+    <h2>Weekly Actions</h2>
+    <div class="btns">
+      <button data-action="market">Market Project</button>
+      <button data-action="guard">Guard Expansion</button>
+      <button data-action="arcane">Arcane Lab</button>
+      <button data-action="relief">Public Relief</button>
+      <button data-action="purge">Political Purge</button>
+      <button data-action="patronage">Private Patronage</button>
+      <button data-action="faithOrder">Back Order Faith</button>
+      <button data-action="faithVeil">Back Veiled Faith</button>
+    </div>
+    <button id="endWeek" style="margin-top:10px;width:100%;background:#047857">End Week</button>
+    <div class="hint">Goal: keep districts stable while shaping identity. Survive 12 months for MVP victory.</div>
+
+    <h2>Event Log</h2>
+    <div id="log" class="log"></div>
+  </aside>
+  <main><canvas id="map" width="1200" height="900"></canvas></main>
+</div>
+
+<script>
+const state = {
+  month:1, week:1,
+  treasury:140, influence:60, wealth:90,
+  morality:50,
+  culture:50, // 0 mercantile, 50 martial, 100 arcane
+  faith:50,   // 0 order, 50 old ways, 100 veiled
+  actionsTaken:0,
+  maxActions:3,
+  gameOver:false,
+  districts:[
+    {name:'Market Ward', x:180,y:170, mood:70, condition:{crime:40,hunger:20,unrest:25,corruption:45,magic:10}, leader:'Guildmaster Varo'},
+    {name:'Citadel Ring', x:530,y:170, mood:75, condition:{crime:20,hunger:15,unrest:20,corruption:15,magic:20}, leader:'Watch Captain Elra'},
+    {name:'Temple Hill', x:880,y:170, mood:65, condition:{crime:18,hunger:25,unrest:30,corruption:10,magic:35}, leader:'Temple Keeper Neris'},
+    {name:'Dockside', x:180,y:500, mood:55, condition:{crime:55,hunger:35,unrest:45,corruption:50,magic:15}, leader:'Noble Steward Corin'},
+    {name:'Scholars Quarter', x:530,y:500, mood:62, condition:{crime:25,hunger:20,unrest:35,corruption:20,magic:60}, leader:'Magister Ysil'},
+    {name:'Old Gardens', x:880,y:500, mood:68, condition:{crime:15,hunger:28,unrest:22,corruption:12,magic:28}, leader:'Community Elder Mair'},
+  ],
+  log:[]
+};
+
+const $ = id => document.getElementById(id);
+const canvas = $('map');
+const ctx = canvas.getContext('2d');
+
+document.querySelectorAll('[data-action]').forEach(btn => btn.onclick = () => performAction(btn.dataset.action));
+$('endWeek').onclick = endWeek;
+
+function addLog(msg){ state.log.unshift(`M${state.month}W${state.week}: ${msg}`); state.log = state.log.slice(0,20); }
+function clamp(v,min,max){ return Math.max(min,Math.min(max,v)); }
+function roll(n){ return Math.floor(Math.random()*n); }
+
+function performAction(action){
+  if (state.gameOver || state.actionsTaken>=state.maxActions) return;
+  switch(action){
+    case 'market':
+      if(state.treasury<18) return addLog('Not enough Treasury for market project.');
+      state.treasury-=18; state.culture=clamp(state.culture-8,0,100);
+      state.districts.forEach(d=>{ d.condition.hunger=clamp(d.condition.hunger-6,0,100); d.condition.corruption=clamp(d.condition.corruption+4,0,100);} );
+      addLog('Market project funded: hunger falls, corruption risk rises.'); break;
+    case 'guard':
+      if(state.treasury<16) return addLog('Not enough Treasury for guard expansion.');
+      state.treasury-=16; state.culture=clamp(state.culture+6,0,100); state.morality=clamp(state.morality-4,0,100);
+      state.districts.forEach(d=>{ d.condition.crime=clamp(d.condition.crime-9,0,100); d.condition.unrest=clamp(d.condition.unrest+2,0,100);} );
+      addLog('Guard expansion enacted: crime reduced through strict order.'); break;
+    case 'arcane':
+      if(state.treasury<20) return addLog('Not enough Treasury for arcane lab.');
+      state.treasury-=20; state.culture=clamp(state.culture+10,0,100); state.faith=clamp(state.faith+8,0,100);
+      state.districts.forEach(d=>{ d.condition.magic=clamp(d.condition.magic+8,0,100); d.condition.hunger=clamp(d.condition.hunger-4,0,100);} );
+      addLog('Arcane lab sponsored: innovation rises with instability.'); break;
+    case 'relief':
+      if(state.treasury<14) return addLog('Not enough Treasury for relief.');
+      state.treasury-=14; state.morality=clamp(state.morality+8,0,100);
+      state.districts.forEach(d=>{ d.condition.hunger=clamp(d.condition.hunger-10,0,100); d.condition.unrest=clamp(d.condition.unrest-5,0,100); d.mood=clamp(d.mood+4,0,100);} );
+      addLog('Humane relief distributed city-wide.'); break;
+    case 'purge':
+      if(state.influence<14) return addLog('Not enough Influence for purge.');
+      state.influence-=14; state.morality=clamp(state.morality-10,0,100); state.faith=clamp(state.faith+5,0,100);
+      state.districts.forEach(d=>{ d.condition.corruption=clamp(d.condition.corruption-10,0,100); d.condition.unrest=clamp(d.condition.unrest+10,0,100);} );
+      addLog('Political purge executed: corruption down, fear and unrest up.'); break;
+    case 'patronage':
+      if(state.wealth<16) return addLog('Not enough Personal Wealth for patronage.');
+      state.wealth-=16; state.influence+=10; state.morality=clamp(state.morality+2,0,100);
+      addLog('Private patronage buys loyalty and standing.'); break;
+    case 'faithOrder':
+      if(state.influence<10) return addLog('Not enough Influence to back Order Faith.');
+      state.influence-=10; state.faith=clamp(state.faith-10,0,100); state.culture=clamp(state.culture+3,0,100);
+      state.districts.forEach(d=>d.condition.unrest=clamp(d.condition.unrest-5,0,100));
+      addLog('Order Faith elevated: stability improves.'); break;
+    case 'faithVeil':
+      if(state.wealth<10) return addLog('Not enough Personal Wealth to back Veiled Faith.');
+      state.wealth-=10; state.faith=clamp(state.faith+12,0,100); state.morality=clamp(state.morality-4,0,100);
+      state.districts.forEach(d=>{ d.condition.magic=clamp(d.condition.magic+7,0,100); d.condition.unrest=clamp(d.condition.unrest+2,0,100); });
+      addLog('Veiled circles protected: occult influence grows.'); break;
+  }
+  state.actionsTaken++; render();
+}
+
+function endWeek(){
+  if (state.gameOver) return;
+  state.districts.forEach(d=>{
+    d.condition.crime = clamp(d.condition.crime + roll(5)-1,0,100);
+    d.condition.hunger = clamp(d.condition.hunger + roll(6)-2,0,100);
+    d.condition.unrest = clamp(d.condition.unrest + Math.floor((d.condition.crime + d.condition.hunger)/80) + roll(4)-1,0,100);
+    d.condition.corruption = clamp(d.condition.corruption + roll(4)-1,0,100);
+    d.condition.magic = clamp(d.condition.magic + (state.culture>65?2:0) + roll(3)-1,0,100);
+    const pressure=(d.condition.crime+d.condition.hunger+d.condition.unrest+d.condition.corruption+d.condition.magic)/5;
+    d.mood=clamp(Math.round(100-pressure),0,100);
+    if(d.mood<30){ addLog(`${d.name} enters flashpoint (${d.leader} demands action).`); state.influence=clamp(state.influence-3,0,999); }
+  });
+
+  state.week++; state.actionsTaken=0;
+  if(state.week>4){
+    state.week=1; state.month++;
+    const avgMood=state.districts.reduce((a,d)=>a+d.mood,0)/state.districts.length;
+    state.treasury += Math.round(18 + avgMood/7 - state.districts.reduce((a,d)=>a+d.condition.corruption,0)/35);
+    state.influence += Math.round((avgMood-50)/8);
+    state.wealth += Math.round(8 + (50-Math.abs(state.culture-25))/10);
+    addLog('New month income applied from city performance.');
+  }
+
+  if(state.month>12){ state.gameOver=true; addLog('Campaign victory: your rule endures 12 months.'); }
+  if(state.districts.filter(d=>d.mood<20).length>=3){ state.gameOver=true; addLog('Collapse: multiple districts rebel.'); }
+  render();
+}
+
+function getAvgConditions(){
+  const sum={crime:0,hunger:0,unrest:0,corruption:0,magic:0};
+  state.districts.forEach(d=>Object.keys(sum).forEach(k=>sum[k]+=d.condition[k]));
+  Object.keys(sum).forEach(k=>sum[k]=Math.round(sum[k]/state.districts.length));
+  return sum;
+}
+
+function renderUI(){
+  $('time').textContent=`${state.month} / ${state.week}`;
+  $('treasury').textContent=state.treasury;
+  $('influence').textContent=state.influence;
+  $('wealth').textContent=state.wealth;
+  $('moralityLabel').textContent=state.morality>55?'Good':state.morality<45?'Evil':'Balanced';
+  $('cultureLabel').textContent=state.culture<34?'Mercantile':state.culture<67?'Martial':'Arcane';
+  $('faithLabel').textContent=state.faith<34?'Order':state.faith<67?'Old Ways':'Veiled';
+  $('moralityBar').style.width = `${state.morality}%`; $('moralityBar').style.background = state.morality>50?'#34d399':'#f87171';
+  $('cultureBar').style.width = `${state.culture}%`; $('cultureBar').style.background = '#60a5fa';
+  $('faithBar').style.width = `${state.faith}%`; $('faithBar').style.background = '#a78bfa';
+
+  const avg=getAvgConditions();
+  $('conditions').innerHTML = Object.entries(avg).map(([k,v])=>`<div class='row'><span>${k}</span><strong>${v}</strong></div>`).join('');
+  $('log').innerHTML = state.log.map(x=>`<div>${x}</div>`).join('');
+
+  document.querySelectorAll('[data-action]').forEach(b=>b.disabled = state.actionsTaken>=state.maxActions || state.gameOver);
+  $('endWeek').disabled = state.gameOver;
+}
+
+function drawMap(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  const bg = ctx.createLinearGradient(0,0,0,canvas.height); bg.addColorStop(0,'#0b1225'); bg.addColorStop(1,'#1e293b');
+  ctx.fillStyle=bg; ctx.fillRect(0,0,canvas.width,canvas.height);
+
+  state.districts.forEach(d=>{
+    const hue = Math.round((d.mood/100)*120);
+    ctx.fillStyle=`hsl(${hue},70%,35%)`;
+    ctx.strokeStyle='rgba(255,255,255,0.15)';
+    ctx.lineWidth=2;
+    ctx.beginPath(); ctx.roundRect(d.x,d.y,250,220,18); ctx.fill(); ctx.stroke();
+    ctx.fillStyle='white'; ctx.font='22px Inter'; ctx.fillText(d.name,d.x+14,d.y+34);
+    ctx.font='16px Inter'; ctx.fillText(`Leader: ${d.leader}`,d.x+14,d.y+58);
+    ctx.fillText(`Mood: ${d.mood}`,d.x+14,d.y+82);
+    ctx.font='14px Inter';
+    ctx.fillText(`Crime ${d.condition.crime}  Hunger ${d.condition.hunger}`,d.x+14,d.y+112);
+    ctx.fillText(`Unrest ${d.condition.unrest}  Corruption ${d.condition.corruption}`,d.x+14,d.y+132);
+    ctx.fillText(`Magic ${d.condition.magic}`,d.x+14,d.y+152);
+  });
+
+  if(state.gameOver){
+    ctx.fillStyle='rgba(0,0,0,0.6)'; ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.fillStyle='#f8fafc'; ctx.font='bold 64px Inter'; ctx.fillText('Campaign Ended',360,420);
+  }
+}
+
+function render(){ renderUI(); drawMap(); }
+addLog('Rule begins. Define what this city will become.');
+render();
+</script>
+</body>
 </html>
